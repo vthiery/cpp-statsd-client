@@ -243,7 +243,7 @@ initialize() noexcept
     {
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "Could not create socket, err=%m");
-        m_errorMessage = buffer;
+        m_errorMessage = std::string(buffer);
         return false;
     }
 
@@ -272,7 +272,7 @@ initialize() noexcept
 
             char buffer[256];
             snprintf(buffer, sizeof(buffer), "getaddrinfo failed: error=%d, msg=%s", ret, gai_strerror(ret));
-            m_errorMessage = buffer;
+            m_errorMessage = std::string(buffer);
 
             return false;
         }
@@ -306,7 +306,7 @@ sendToDaemon(const std::string& message) noexcept
     {
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "sendto server failed: host=%s:%d, err=%m", m_host.c_str(), m_port);
-        m_errorMessage = buffer;
+        m_errorMessage = std::string(buffer);
     }
 }
 
