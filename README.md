@@ -9,7 +9,7 @@ The client allows:
 ## Usage
 A simple example of how to use the client:
 
-```
+```cpp
 #include "StatsdClient.hpp"
 using namespace Statsd;
 
