@@ -39,4 +39,4 @@ int main()
 ```
 
 ## License
-This extension is under MIT license.
+This library is under MIT license.
