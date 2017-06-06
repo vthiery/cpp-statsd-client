@@ -104,7 +104,7 @@ private:
     // @{
 
     //! Shall the sender use batching?
-    bool m_batching;
+    bool m_batching{ false };
 
     //! The batching size
     uint64_t m_batchsize;
