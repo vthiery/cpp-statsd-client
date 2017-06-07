@@ -9,10 +9,9 @@
 #include <mutex>
 #include <netdb.h>
 #include <string>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <thread>
-#include <unistd.h>
+
+#include "Socket.hpp"
 
 namespace Statsd
 {
@@ -96,7 +95,7 @@ private:
     struct sockaddr_in m_server;
 
     //! The socket to be used
-    int m_socket{ -1 };
+    Socket m_socket;
 
     //!@}
 
@@ -175,11 +174,7 @@ UDPSender::
         m_batchingThread.join();
     }
 
-    if (m_socket >= 0)
-    {
-        close(m_socket);
-        m_socket = -1;
-    }
+    m_socket.close();
 }
 
 void
@@ -191,11 +186,7 @@ setConfig(const std::string& host, const uint16_t port) noexcept
 
     m_isInitialized = false;
 
-    if (m_socket >= 0)
-    {
-        close(m_socket);
-    }
-    m_socket = -1;
+    m_socket.close();
 }
 
 void
@@ -238,8 +229,7 @@ initialize() noexcept
     }
 
     // Connect the socket
-    m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (m_socket == -1)
+    if (!m_socket.connect(AF_INET, SOCK_DGRAM, IPPROTO_UDP))
     {
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "Could not create socket, err=%m");
@@ -267,8 +257,7 @@ initialize() noexcept
         if (ret != 0)
         {
             // An error code has been returned by getaddrinfo
-            close(m_socket);
-            m_socket = -1;
+            m_socket.close();
 
             char buffer[256];
             snprintf(buffer, sizeof(buffer), "getaddrinfo failed: error=%d, msg=%s", ret, gai_strerror(ret));
@@ -301,8 +290,7 @@ sendToDaemon(const std::string& message) noexcept
     }
 
     // Try sending the message
-    const int ret = sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr *)&m_server, sizeof(m_server));
-    if (ret == -1)
+    if (!m_socket.send(message, m_server))
     {
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "sendto server failed: host=%s:%d, err=%m", m_host.c_str(), m_port);
