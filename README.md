@@ -1,5 +1,9 @@
 # C++ StatsD Client
 
+[ ![Download](https://api.bintray.com/packages/vthiery/conan-packages/statsdclient%3Avthiery/images/download.svg) ](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion)
+[![Github Issues](https://img.shields.io/github/issues/vthiery/cpp-statsd-client.svg)](https://github.com/vthiery/cpp-statsd-client/issues)
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/vthiery/cpp-statsd-client.svg)](http://isitmaintained.com/project/vthiery/cpp-statsd-client "Average time to resolve an issue")
+
 A header-only StatsD client implemented in C++.
 The client allows:
 - batching,
