@@ -143,7 +143,7 @@ UDPSender(
         m_batchsize = batchsize.value();
 
         // Define the batching thread
-        m_batchingThread = std::thread([this] {
+        m_batchingThread = std::thread([this, batchingWait] {
             while (!m_mustExit)
             {
                 std::deque<std::string> stagedMessageQueue;
