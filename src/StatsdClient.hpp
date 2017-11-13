@@ -1,6 +1,7 @@
 #ifndef STATSD_CLIENT_HPP
 #define STATSD_CLIENT_HPP
 
+#include <cstdlib>
 #include <experimental/optional>
 #include <string>
 #include "UDPSender.hpp"
@@ -32,9 +33,6 @@ public:
         const uint16_t port,
         const std::string& prefix,
         const std::experimental::optional<uint64_t> batchsize = std::experimental::nullopt) noexcept;
-
-    //! Default destructor
-    ~StatsdClient() = default;
 
     //!@}
 
@@ -96,7 +94,7 @@ StatsdClient(
 , m_sender(host, port, batchsize)
 {
     // Initialize the randorm generator to be used for sampling
-    srandom(time(NULL));
+    std::srand(time(nullptr));
 }
 
 void
@@ -162,7 +160,7 @@ send(const std::string& key, const int value, const std::string& type, const flo
     // Test if one should send or not, according to the frequency rate
     if (!isFrequencyOne(frequency))
     {
-        if (frequency < (float)random() / RAND_MAX)
+        if (frequency < static_cast<float>(std::rand()) / RAND_MAX)
         {
             return;
         }
