@@ -232,6 +232,8 @@ bool
 UDPSender::
 initialize() noexcept
 {
+    using namespace std::string_literals;
+
     if (m_isInitialized)
     {
         return true;
@@ -241,9 +243,7 @@ initialize() noexcept
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (m_socket == -1)
     {
-        char buffer[256];
-        snprintf(buffer, sizeof(buffer), "Could not create socket, err=%m");
-        m_errorMessage = std::string(buffer);
+        m_errorMessage = "Could not create socket, err="s + std::strerror(errno);
         return false;
     }
 
@@ -263,17 +263,13 @@ initialize() noexcept
 
         // Get the address info using the hints
         struct addrinfo* results = nullptr;
-        const int ret = getaddrinfo(m_host.c_str(), nullptr, &hints, &results);
+        const int ret{ getaddrinfo(m_host.c_str(), nullptr, &hints, &results) };
         if (ret != 0)
         {
             // An error code has been returned by getaddrinfo
             close(m_socket);
             m_socket = -1;
-
-            char buffer[256];
-            snprintf(buffer, sizeof(buffer), "getaddrinfo failed: error=%d, msg=%s", ret, gai_strerror(ret));
-            m_errorMessage = std::string(buffer);
-
+            m_errorMessage = "getaddrinfo failed: error="s + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
         }
 
@@ -286,7 +282,6 @@ initialize() noexcept
     }
 
     m_isInitialized = true;
-
     return true;
 }
 
@@ -301,12 +296,11 @@ sendToDaemon(const std::string& message) noexcept
     }
 
     // Try sending the message
-    const int ret = sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr *)&m_server, sizeof(m_server));
+    const long int ret{ sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr *)&m_server, sizeof(m_server)) };
     if (ret == -1)
     {
-        char buffer[256];
-        snprintf(buffer, sizeof(buffer), "sendto server failed: host=%s:%d, err=%m", m_host.c_str(), m_port);
-        m_errorMessage = std::string(buffer);
+        using namespace std::string_literals;
+        m_errorMessage = "sendto server failed: host="s + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
     }
 }
 
