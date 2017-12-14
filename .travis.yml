@@ -1,21 +1,14 @@
 language: cpp
 
+os:
+    - linux
+
 compiler:
     - clang
     - gcc
-
-before_install:
-    - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-    - sudo apt-get -qq update
-    - sudo apt-get -qq install gcc-4.8 g++-4.8
-    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 50
-    - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 50
 
 env:
     - BUILD_MODE=Debug
     - BUILD_MODE=Release
 
 script: make test BUILD_MODE=$BUILD_MODE
-
-os:
-    - linux

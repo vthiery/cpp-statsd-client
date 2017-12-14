@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.2)
 
 project(StatsdClient)
 
+add_definitions(-Wall -std=c++17)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 install(FILES src/* DESTINATION include)
