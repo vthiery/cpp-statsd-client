@@ -67,16 +67,6 @@ public:
 
 private:
 
-    // @name Private methods
-    // @{
-
-    //! Returns a cleaned key
-    inline std::string clean(const std::string& key) const noexcept;
-
-    // @}
-
-private:
-
     //! The prefix to be used for metrics
     std::string m_prefix;
 
@@ -166,9 +156,6 @@ send(const std::string& key, const int value, const std::string& type, const flo
         }
     }
 
-    // Clean the key
-    clean(key);
-
     // Prepare the buffer, with a sampling rate if specified different from 1.0f
     char buffer[256];
     if (isFrequencyOne(frequency))
@@ -184,22 +171,6 @@ send(const std::string& key, const int value, const std::string& type, const flo
 
     // Send the message via the UDP sender
     m_sender.send(buffer);
-}
-
-std::string
-StatsdClient::
-clean(const std::string& key) const noexcept
-{
-    std::string cleanKey = key;
-    size_t pos = key.find_first_of(":|@");
-
-    // Add the '_' appropriately to the key
-    while (pos != std::string::npos)
-    {
-        cleanKey[pos] = '_';
-        pos = cleanKey.find_first_of(":|@");
-    }
-    return cleanKey;
 }
 
 }
