@@ -1,14 +1,46 @@
 language: cpp
 
-os:
-    - linux
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+         - MATRIX_EVAL="BUILD_MODE=Debug && CC=gcc-7 && CXX=g++-7"
 
-compiler:
-    - clang
-    - gcc
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+         - MATRIX_EVAL="BUILD_MODE=Release && CC=gcc-7 && CXX=g++-7"
 
-env:
-    - BUILD_MODE=Debug
-    - BUILD_MODE=Release
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+         - MATRIX_EVAL="BUILD_MODE=Debug && CC=clang-5.0 && CXX=clang++-5.0"
 
-script: make test BUILD_MODE=$BUILD_MODE
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+         - MATRIX_EVAL="BUILD_MODE=Release && CC=clang-5.0 && CXX=clang++-5.0"
+
+before_install:
+    - eval "${MATRIX_EVAL}"
