@@ -1,6 +1,7 @@
 #ifndef STATSD_CLIENT_HPP
 #define STATSD_CLIENT_HPP
 
+#include <cstdlib>
 #include <experimental/optional>
 #include <string>
 #include "UDPSender.hpp"
@@ -32,9 +33,6 @@ public:
         const uint16_t port,
         const std::string& prefix,
         const std::experimental::optional<uint64_t> batchsize = std::experimental::nullopt) noexcept;
-
-    //! Default destructor
-    ~StatsdClient() = default;
 
     //!@}
 
@@ -69,16 +67,6 @@ public:
 
 private:
 
-    // @name Private methods
-    // @{
-
-    //! Returns a cleaned key
-    inline std::string clean(const std::string& key) const noexcept;
-
-    // @}
-
-private:
-
     //! The prefix to be used for metrics
     std::string m_prefix;
 
@@ -96,7 +84,7 @@ StatsdClient(
 , m_sender(host, port, batchsize)
 {
     // Initialize the randorm generator to be used for sampling
-    srandom(time(NULL));
+    std::srand(time(nullptr));
 }
 
 void
@@ -162,46 +150,27 @@ send(const std::string& key, const int value, const std::string& type, const flo
     // Test if one should send or not, according to the frequency rate
     if (!isFrequencyOne(frequency))
     {
-        if (frequency < (float)random() / RAND_MAX)
+        if (frequency < static_cast<float>(std::rand()) / RAND_MAX)
         {
             return;
         }
     }
-
-    // Clean the key
-    clean(key);
 
     // Prepare the buffer, with a sampling rate if specified different from 1.0f
     char buffer[256];
     if (isFrequencyOne(frequency))
     {
         // Sampling rate is 1.0f, no need to specify it
-        snprintf(buffer, sizeof(buffer), "%s%s:%zd|%s", m_prefix.c_str(), key.c_str(), static_cast<signed size_t>(value), type.c_str());
+        snprintf(buffer, sizeof(buffer), "%s%s:%zd|%s", m_prefix.c_str(), key.c_str(), static_cast<int64_t>(value), type.c_str());
     }
     else
     {
         // Sampling rate is different from 1.0f, hence specify it
-        snprintf(buffer, sizeof(buffer), "%s%s:%zd|%s|@%.2f", m_prefix.c_str(), key.c_str(), static_cast<signed size_t>(value), type.c_str(), frequency);
+        snprintf(buffer, sizeof(buffer), "%s%s:%zd|%s|@%.2f", m_prefix.c_str(), key.c_str(), static_cast<int64_t>(value), type.c_str(), frequency);
     }
 
     // Send the message via the UDP sender
     m_sender.send(buffer);
-}
-
-std::string
-StatsdClient::
-clean(const std::string& key) const noexcept
-{
-    std::string cleanKey = key;
-    size_t pos = key.find_first_of(":|@");
-
-    // Add the '_' appropriately to the key
-    while (pos != std::string::npos)
-    {
-        cleanKey[pos] = '_';
-        pos = cleanKey.find_first_of(":|@");
-    }
-    return cleanKey;
 }
 
 }
