@@ -20,7 +20,7 @@ using namespace Statsd;
 int main()
 {
     // Define the client
-    StatsdClient client{ "127.0.0.1", 5005, "myPrefix_", true };
+    StatsdClient client{ "127.0.0.1", 5005, "myPrefix.", 3 };
 
     // Increment "coco"
     client.increment("coco");
