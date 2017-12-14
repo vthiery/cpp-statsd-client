@@ -16,4 +16,3 @@ install: build
 
 clean:
 	@rm -rf bin
-
