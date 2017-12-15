@@ -13,6 +13,8 @@ The client allows:
 
 ## Install and Test
 
+### Makefile
+
 In order to install the header files and/or run the tests, simply use the Makefile and execute
 
 ```
@@ -24,6 +26,10 @@ and
 ```
  make test
  ```
+
+### Conan
+
+If you are using [Conan](https://www.conan.io/) to manage your dependencies, merely add statsdclient/x.y.z@vthiery/stable to your conanfile.py's requires, where x.y.z is the release version you want to use. Please file issues here if you experience problems with the packages. You can also directly download the latest version [here](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion).
 
 ## Usage
 ### Example
