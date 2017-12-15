@@ -4,7 +4,7 @@ project(StatsdClient)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-install(FILES src/* DESTINATION include)
+install(FILES src/UDPSender.hpp src/StatsdClient.hpp DESTINATION include)
 
 find_package(Threads)
 add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
