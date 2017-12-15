@@ -5,10 +5,10 @@ using namespace Statsd;
 
 int main()
 {
-    StatsdClient client{ "localhost", 8080, "myPrefix.", 1 };
+    StatsdClient client{ "localhost", 8080, "myPrefix.", 20 };
 
     // set a new config with a different port
-    client.setConfig("localhost", 80, "myPrefix.");
+    client.setConfig("localhost", 8000, "myPrefix.");
 
     // Increment "coco"
     client.increment("coco");

@@ -161,12 +161,12 @@ send(const std::string& key, const int value, const std::string& type, const flo
     if (isFrequencyOne(frequency))
     {
         // Sampling rate is 1.0f, no need to specify it
-        snprintf(buffer, sizeof(buffer), "%s%s:%zd|%s", m_prefix.c_str(), key.c_str(), static_cast<int64_t>(value), type.c_str());
+        std::snprintf(buffer, sizeof(buffer), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
     }
     else
     {
         // Sampling rate is different from 1.0f, hence specify it
-        snprintf(buffer, sizeof(buffer), "%s%s:%zd|%s|@%.2f", m_prefix.c_str(), key.c_str(), static_cast<int64_t>(value), type.c_str(), frequency);
+        std::snprintf(buffer, sizeof(buffer), "%s%s:%d|%s|@%.2f", m_prefix.c_str(), key.c_str(), value, type.c_str(), frequency);
     }
 
     // Send the message via the UDP sender
