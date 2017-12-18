@@ -1,5 +1,7 @@
 # C++ StatsD Client
 
+![logo](https://raw.githubusercontent.com/vthiery/cpp-statsd-client/develop/images/logo.svg?sanitize=true)
+
 [ ![Download](https://api.bintray.com/packages/vthiery/conan-packages/statsdclient%3Avthiery/images/download.svg) ](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion)
 [![Build Status](https://travis-ci.org/vthiery/cpp-statsd-client.svg?branch=develop)](https://travis-ci.org/vthiery/cpp-statsd-client)
 [![Github Issues](https://img.shields.io/github/issues/vthiery/cpp-statsd-client.svg)](https://github.com/vthiery/cpp-statsd-client/issues)
