@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.2)
 
 project(StatsdClient)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/cpp-statsd-client)
 
-install(FILES src/UDPSender.hpp src/StatsdClient.hpp DESTINATION include)
+install(FILES UDPSender.hpp StatsdClient.hpp DESTINATION include)
 
 find_package(Threads)
 add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
