@@ -3,9 +3,8 @@
 
 using namespace Statsd;
 
-int main()
-{
-    StatsdClient client{ "localhost", 8080, "myPrefix.", 20 };
+int main() {
+    StatsdClient client{"localhost", 8080, "myPrefix.", 20};
 
     // set a new config with a different port
     client.setConfig("localhost", 8000, "myPrefix.");
