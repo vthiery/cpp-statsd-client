@@ -9,8 +9,8 @@
 #include <cmath>
 #include <cstring>
 #include <deque>
-#include <experimental/optional>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -30,9 +30,9 @@ public:
     //!@{
 
     //! Constructor
-    UDPSender(const std::string &host,
+    UDPSender(const std::string& host,
               const uint16_t port,
-              const std::experimental::optional<uint64_t> batchsize = std::experimental::nullopt) noexcept;
+              const std::optional<uint64_t> batchsize = std::nullopt) noexcept;
 
     //! Destructor
     ~UDPSender();
@@ -43,13 +43,13 @@ public:
     //!@{
 
     //! Sets a configuration { host, port }
-    inline void setConfig(const std::string &host, const uint16_t port) noexcept;
+    inline void setConfig(const std::string& host, const uint16_t port) noexcept;
 
     //! Send a message
-    void send(const std::string &message) noexcept;
+    void send(const std::string& message) noexcept;
 
     //! Returns the error message as an optional string
-    inline std::experimental::optional<std::string> errorMessage() const noexcept;
+    inline std::optional<std::string> errorMessage() const noexcept;
 
     //!@}
 
@@ -61,7 +61,7 @@ private:
     bool initialize() noexcept;
 
     //! Send a message to the daemon
-    void sendToDaemon(const std::string &message) noexcept;
+    void sendToDaemon(const std::string& message) noexcept;
 
     //!@}
 
@@ -115,12 +115,10 @@ private:
     //!@}
 
     //! Error message (optional string)
-    std::experimental::optional<std::string> m_errorMessage;
+    std::optional<std::string> m_errorMessage;
 };
 
-UDPSender::UDPSender(const std::string &host,
-                     const uint16_t port,
-                     const std::experimental::optional<uint64_t> batchsize) noexcept
+UDPSender::UDPSender(const std::string& host, const uint16_t port, const std::optional<uint64_t> batchsize) noexcept
     : m_host(host), m_port(port) {
     // If batching is on, use a dedicated thread to send every now and then
     if (batchsize) {
@@ -165,7 +163,7 @@ UDPSender::~UDPSender() {
     }
 }
 
-void UDPSender::setConfig(const std::string &host, const uint16_t port) noexcept {
+void UDPSender::setConfig(const std::string& host, const uint16_t port) noexcept {
     m_host = host;
     m_port = port;
 
@@ -177,7 +175,7 @@ void UDPSender::setConfig(const std::string &host, const uint16_t port) noexcept
     m_socket = -1;
 }
 
-void UDPSender::send(const std::string &message) noexcept {
+void UDPSender::send(const std::string& message) noexcept {
     // If batching is on, accumulate messages in the queue
     if (m_batching) {
         std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
@@ -191,7 +189,7 @@ void UDPSender::send(const std::string &message) noexcept {
     }
 }
 
-std::experimental::optional<std::string> UDPSender::errorMessage() const noexcept {
+std::optional<std::string> UDPSender::errorMessage() const noexcept {
     return m_errorMessage;
 }
 
@@ -245,7 +243,7 @@ bool UDPSender::initialize() noexcept {
     return true;
 }
 
-void UDPSender::sendToDaemon(const std::string &message) noexcept {
+void UDPSender::sendToDaemon(const std::string& message) noexcept {
     // Can't send until the sender is initialized
     if (!initialize()) {
         return;

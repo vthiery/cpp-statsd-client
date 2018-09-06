@@ -2,7 +2,7 @@
 #define STATSD_CLIENT_HPP
 
 #include <cstdlib>
-#include <experimental/optional>
+#include <optional>
 #include <string>
 #include "UDPSender.hpp"
 
@@ -25,10 +25,10 @@ public:
     //!@{
 
     //! Constructor
-    StatsdClient(const std::string &host,
+    StatsdClient(const std::string& host,
                  const uint16_t port,
-                 const std::string &prefix,
-                 const std::experimental::optional<uint64_t> batchsize = std::experimental::nullopt) noexcept;
+                 const std::string& prefix,
+                 const std::optional<uint64_t> batchsize = std::nullopt) noexcept;
 
     //!@}
 
@@ -36,28 +36,28 @@ public:
     //!@{
 
     //! Sets a configuration { host, port, prefix }
-    inline void setConfig(const std::string &host, const uint16_t port, const std::string &prefix) noexcept;
+    inline void setConfig(const std::string& host, const uint16_t port, const std::string& prefix) noexcept;
 
     //! Returns the error message as an optional std::string
-    inline std::experimental::optional<std::string> errorMessage() const noexcept;
+    inline std::optional<std::string> errorMessage() const noexcept;
 
     //! Increments the key, at a given frequency rate
-    inline void increment(const std::string &key, const float frequency = 1.0f) const noexcept;
+    inline void increment(const std::string& key, const float frequency = 1.0f) const noexcept;
 
     //! Increments the key, at a given frequency rate
-    inline void decrement(const std::string &key, const float frequency = 1.0f) const noexcept;
+    inline void decrement(const std::string& key, const float frequency = 1.0f) const noexcept;
 
     //! Adjusts the specified key by a given delta, at a given frequency rate
-    inline void count(const std::string &key, const int delta, const float frequency = 1.0f) const noexcept;
+    inline void count(const std::string& key, const int delta, const float frequency = 1.0f) const noexcept;
 
     //! Records a gauge for the key, with a given value, at a given frequency rate
-    inline void gauge(const std::string &key, const unsigned int value, const float frequency = 1.0f) const noexcept;
+    inline void gauge(const std::string& key, const unsigned int value, const float frequency = 1.0f) const noexcept;
 
     //! Records a timing for a key, at a given frequency
-    inline void timing(const std::string &key, const unsigned int ms, const float frequency = 1.0f) const noexcept;
+    inline void timing(const std::string& key, const unsigned int ms, const float frequency = 1.0f) const noexcept;
 
     //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string &key, const int value, const std::string &type, const float frequency = 1.0f) const
+    void send(const std::string& key, const int value, const std::string& type, const float frequency = 1.0f) const
         noexcept;
 
     //!@}
@@ -70,45 +70,45 @@ private:
     mutable UDPSender m_sender;
 };
 
-StatsdClient::StatsdClient(const std::string &host,
+StatsdClient::StatsdClient(const std::string& host,
                            const uint16_t port,
-                           const std::string &prefix,
-                           const std::experimental::optional<uint64_t> batchsize) noexcept
+                           const std::string& prefix,
+                           const std::optional<uint64_t> batchsize) noexcept
     : m_prefix(prefix), m_sender(host, port, batchsize) {
     // Initialize the randorm generator to be used for sampling
     std::srand(time(nullptr));
 }
 
-void StatsdClient::setConfig(const std::string &host, const uint16_t port, const std::string &prefix) noexcept {
+void StatsdClient::setConfig(const std::string& host, const uint16_t port, const std::string& prefix) noexcept {
     m_prefix = prefix;
     m_sender.setConfig(host, port);
 }
 
-std::experimental::optional<std::string> StatsdClient::errorMessage() const noexcept {
+std::optional<std::string> StatsdClient::errorMessage() const noexcept {
     return m_sender.errorMessage();
 }
 
-void StatsdClient::decrement(const std::string &key, const float frequency) const noexcept {
+void StatsdClient::decrement(const std::string& key, const float frequency) const noexcept {
     return count(key, -1, frequency);
 }
 
-void StatsdClient::increment(const std::string &key, const float frequency) const noexcept {
+void StatsdClient::increment(const std::string& key, const float frequency) const noexcept {
     return count(key, 1, frequency);
 }
 
-void StatsdClient::count(const std::string &key, const int delta, const float frequency) const noexcept {
+void StatsdClient::count(const std::string& key, const int delta, const float frequency) const noexcept {
     return send(key, delta, "c", frequency);
 }
 
-void StatsdClient::gauge(const std::string &key, const unsigned int value, const float frequency) const noexcept {
+void StatsdClient::gauge(const std::string& key, const unsigned int value, const float frequency) const noexcept {
     return send(key, value, "g", frequency);
 }
 
-void StatsdClient::timing(const std::string &key, const unsigned int ms, const float frequency) const noexcept {
+void StatsdClient::timing(const std::string& key, const unsigned int ms, const float frequency) const noexcept {
     return send(key, ms, "ms", frequency);
 }
 
-void StatsdClient::send(const std::string &key, const int value, const std::string &type, const float frequency) const
+void StatsdClient::send(const std::string& key, const int value, const std::string& type, const float frequency) const
     noexcept {
     const auto isFrequencyOne = [](const float frequency) noexcept {
         constexpr float epsilon{0.0001f};
