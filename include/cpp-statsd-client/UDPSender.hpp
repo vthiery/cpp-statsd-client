@@ -43,13 +43,13 @@ public:
     //!@{
 
     //! Sets a configuration { host, port }
-    inline void setConfig(const std::string& host, const uint16_t port) noexcept;
+    void setConfig(const std::string& host, const uint16_t port) noexcept;
 
     //! Send a message
     void send(const std::string& message) noexcept;
 
     //! Returns the error message as an optional string
-    inline std::optional<std::string> errorMessage() const noexcept;
+    std::optional<std::string> errorMessage() const noexcept;
 
     //!@}
 
@@ -118,7 +118,7 @@ private:
     std::optional<std::string> m_errorMessage;
 };
 
-UDPSender::UDPSender(const std::string& host, const uint16_t port, const std::optional<uint64_t> batchsize) noexcept
+inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const std::optional<uint64_t> batchsize) noexcept
     : m_host(host), m_port(port) {
     // If batching is on, use a dedicated thread to send every now and then
     if (batchsize) {
@@ -151,7 +151,7 @@ UDPSender::UDPSender(const std::string& host, const uint16_t port, const std::op
     }
 }
 
-UDPSender::~UDPSender() {
+inline UDPSender::~UDPSender() {
     if (m_batching) {
         m_mustExit = true;
         m_batchingThread.join();
@@ -163,7 +163,7 @@ UDPSender::~UDPSender() {
     }
 }
 
-void UDPSender::setConfig(const std::string& host, const uint16_t port) noexcept {
+inline void UDPSender::setConfig(const std::string& host, const uint16_t port) noexcept {
     m_host = host;
     m_port = port;
 
@@ -175,7 +175,7 @@ void UDPSender::setConfig(const std::string& host, const uint16_t port) noexcept
     m_socket = -1;
 }
 
-void UDPSender::send(const std::string& message) noexcept {
+inline void UDPSender::send(const std::string& message) noexcept {
     // If batching is on, accumulate messages in the queue
     if (m_batching) {
         std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
@@ -189,11 +189,11 @@ void UDPSender::send(const std::string& message) noexcept {
     }
 }
 
-std::optional<std::string> UDPSender::errorMessage() const noexcept {
+inline std::optional<std::string> UDPSender::errorMessage() const noexcept {
     return m_errorMessage;
 }
 
-bool UDPSender::initialize() noexcept {
+inline bool UDPSender::initialize() noexcept {
     using namespace std::string_literals;
 
     if (m_isInitialized) {
@@ -243,7 +243,7 @@ bool UDPSender::initialize() noexcept {
     return true;
 }
 
-void UDPSender::sendToDaemon(const std::string& message) noexcept {
+inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
     // Can't send until the sender is initialized
     if (!initialize()) {
         return;
