@@ -2,13 +2,14 @@
 
 ![logo](https://raw.githubusercontent.com/vthiery/cpp-statsd-client/master/images/logo.svg?sanitize=true)
 
-[ ![Download](https://api.bintray.com/packages/vthiery/conan-packages/statsdclient%3Avthiery/images/download.svg) ](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion)
+[![Download](https://api.bintray.com/packages/vthiery/conan-packages/statsdclient%3Avthiery/images/download.svg)](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion)
 [![Build Status](https://travis-ci.org/vthiery/cpp-statsd-client.svg?branch=master)](https://travis-ci.org/vthiery/cpp-statsd-client)
 [![Github Issues](https://img.shields.io/github/issues/vthiery/cpp-statsd-client.svg)](https://github.com/vthiery/cpp-statsd-client/issues)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/vthiery/cpp-statsd-client.svg)](http://isitmaintained.com/project/vthiery/cpp-statsd-client "Average time to resolve an issue")
 
 A header-only StatsD client implemented in C++.
 The client allows:
+
 - batching,
 - change of configuration at runtime,
 - user-defined frequency rate.
@@ -19,22 +20,24 @@ The client allows:
 
 In order to install the header files and/or run the tests, simply use the Makefile and execute
 
+```sh
+make install
 ```
- make install
- ```
 
 and
 
+```sh
+make test
 ```
- make test
- ```
 
 ### Conan
 
 If you are using [Conan](https://www.conan.io/) to manage your dependencies, merely add statsdclient/x.y.z@vthiery/stable to your conanfile.py's requires, where x.y.z is the release version you want to use. Please file issues here if you experience problems with the packages. You can also directly download the latest version [here](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion).
 
 ## Usage
+
 ### Example
+
 A simple example of how to use the client:
 
 ```cpp
@@ -93,12 +96,14 @@ The batchsize is the only parameter that cannot be changed for the time being.
 ### Batching
 
 The client supports batching of the metrics:
-* the unit of the batching parameter is bytes,
-* it is optional and not setting it will result in an immediate send of any metrics,
+
+- the unit of the batching parameter is bytes,
+- it is optional and not setting it will result in an immediate send of any metrics,
 
 If set, the UDP sender will spawn a thread sending the metrics to the server every 1 second by aggregates. The aggregation logic is as follows:
-* if the last message has already reached the batching limit, add a new element in a message queue;
-* otherwise, append the message to the last one, separated by a `\n`.
+
+- if the last message has already reached the batching limit, add a new element in a message queue;
+- otherwise, append the message to the last one, separated by a `\n`.
 
 ### Frequency rate
 
@@ -106,6 +111,6 @@ When sending a metric, a frequency rate can be set in order to limit the metrics
 
 If the frequency rate is set and `epsilon` different from one, the sending will be rejected randomly (the higher the frequency rate, the lower the probability of rejection).
 
-
 ## License
+
 This library is under MIT license.
