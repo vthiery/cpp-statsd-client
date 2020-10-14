@@ -1,12 +1,17 @@
 #ifndef UDP_SENDER_HPP
 #define UDP_SENDER_HPP
 
+#if _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <io.h>
+#else
 #include <arpa/inet.h>
-#include <netdb.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <atomic>
+#endif
 #include <cmath>
 #include <cstring>
 #include <deque>
@@ -210,7 +215,7 @@ inline bool UDPSender::initialize() noexcept {
     m_server.sin_family = AF_INET;
     m_server.sin_port = htons(m_port);
 
-    if (inet_aton(m_host.c_str(), &m_server.sin_addr) == 0) {
+    if (inet_pton(AF_INET, m_host.c_str(), &m_server.sin_addr) == 0) {
         // An error code has been returned by inet_aton
 
         // Specify the criteria for selecting the socket address structure

@@ -5,8 +5,14 @@ project(cpp-statsd-client
         LANGUAGES CXX
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(BUILD_TESTS "Build tests" OFF)
+option(HUNTER_ENABLED "Use the Hunter package manager" OFF)
+
+if(NOT HUNTER_ENABLED)
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads)
@@ -18,6 +24,9 @@ target_include_directories(
   INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(${PROJECT_NAME} INTERFACE Threads::Threads)
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} INTERFACE ws2_32)
+endif()
 
 # The installation and pkg-config-like cmake config
 install(TARGETS ${PROJECT_NAME}
@@ -42,13 +51,15 @@ install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
 
-# The test targets
-add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
-target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
-target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-target_link_libraries(testStatsdClient ${PROJECT_NAME})
+if(BUILD_TESTS)
+  # The test targets
+  add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
+  target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
+  target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+  target_link_libraries(testStatsdClient ${PROJECT_NAME})
 
-# The test suite
-enable_testing()
-add_test(ctestTestStatsdClient testStatsdClient)
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS testStatsdClient)
+  # The test suite
+  enable_testing()
+  add_test(ctestTestStatsdClient testStatsdClient)
+  add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS testStatsdClient)
+endif()
