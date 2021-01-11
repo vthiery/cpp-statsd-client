@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <deque>
@@ -73,7 +74,7 @@ private:
     bool m_isInitialized{false};
 
     //! Shall we exit?
-    bool m_mustExit{false};
+    std::atomic<bool> m_mustExit{false};
 
     //!@}
 
@@ -118,7 +119,9 @@ private:
     std::optional<std::string> m_errorMessage;
 };
 
-inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const std::optional<uint64_t> batchsize) noexcept
+inline UDPSender::UDPSender(const std::string& host,
+                            const uint16_t port,
+                            const std::optional<uint64_t> batchsize) noexcept
     : m_host(host), m_port(port) {
     // If batching is on, use a dedicated thread to send every now and then
     if (batchsize) {
@@ -131,7 +134,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
 
         // Define the batching thread
         m_batchingThread = std::thread([this, batchingWait] {
-            while (!m_mustExit) {
+            while (!m_mustExit.load(std::memory_order_acq_rel)) {
                 std::deque<std::string> stagedMessageQueue;
 
                 std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
@@ -153,7 +156,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
 
 inline UDPSender::~UDPSender() {
     if (m_batching) {
-        m_mustExit = true;
+        m_mustExit.store(true, std::memory_order_acq_rel);
         m_batchingThread.join();
     }
 
@@ -221,7 +224,7 @@ inline bool UDPSender::initialize() noexcept {
         hints.ai_socktype = SOCK_DGRAM;
 
         // Get the address info using the hints
-        struct addrinfo *results = nullptr;
+        struct addrinfo* results = nullptr;
         const int ret{getaddrinfo(m_host.c_str(), nullptr, &hints, &results)};
         if (ret != 0) {
             // An error code has been returned by getaddrinfo
@@ -232,7 +235,7 @@ inline bool UDPSender::initialize() noexcept {
         }
 
         // Copy the results in m_server
-        struct sockaddr_in *host_addr = (struct sockaddr_in *)results->ai_addr;
+        struct sockaddr_in* host_addr = (struct sockaddr_in*)results->ai_addr;
         std::memcpy(&m_server.sin_addr, &host_addr->sin_addr, sizeof(struct in_addr));
 
         // Free the memory allocated
@@ -251,7 +254,7 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
 
     // Try sending the message
     const long int ret{
-        sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr *)&m_server, sizeof(m_server))};
+        sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
     if (ret == -1) {
         using namespace std::string_literals;
         m_errorMessage =

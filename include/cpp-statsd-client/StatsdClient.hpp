@@ -71,9 +71,9 @@ private:
 };
 
 inline StatsdClient::StatsdClient(const std::string& host,
-                           const uint16_t port,
-                           const std::string& prefix,
-                           const std::optional<uint64_t> batchsize) noexcept
+                                  const uint16_t port,
+                                  const std::string& prefix,
+                                  const std::optional<uint64_t> batchsize) noexcept
     : m_prefix(prefix), m_sender(host, port, batchsize) {
     // Initialize the randorm generator to be used for sampling
     std::srand(time(nullptr));
@@ -100,7 +100,8 @@ inline void StatsdClient::count(const std::string& key, const int delta, const f
     return send(key, delta, "c", frequency);
 }
 
-inline void StatsdClient::gauge(const std::string& key, const unsigned int value, const float frequency) const noexcept {
+inline void StatsdClient::gauge(const std::string& key, const unsigned int value, const float frequency) const
+    noexcept {
     return send(key, value, "g", frequency);
 }
 
@@ -108,8 +109,10 @@ inline void StatsdClient::timing(const std::string& key, const unsigned int ms, 
     return send(key, ms, "ms", frequency);
 }
 
-inline void StatsdClient::send(const std::string& key, const int value, const std::string& type, const float frequency) const
-    noexcept {
+inline void StatsdClient::send(const std::string& key,
+                               const int value,
+                               const std::string& type,
+                               const float frequency) const noexcept {
     const auto isFrequencyOne = [](const float frequency) noexcept {
         constexpr float epsilon{0.0001f};
         return std::fabs(frequency - 1.0f) < epsilon;
