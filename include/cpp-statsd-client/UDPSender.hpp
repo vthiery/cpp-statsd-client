@@ -11,7 +11,6 @@
 #include <cstring>
 #include <deque>
 #include <mutex>
-#include <optional>
 #include <string>
 #include <thread>
 
@@ -33,7 +32,7 @@ public:
     //! Constructor
     UDPSender(const std::string& host,
               const uint16_t port,
-              const std::optional<uint64_t> batchsize = std::nullopt) noexcept;
+              const uint64_t batchsize = std::numeric_limits<uint64_t>::max()) noexcept;
 
     //! Destructor
     ~UDPSender();
@@ -50,7 +49,7 @@ public:
     void send(const std::string& message) noexcept;
 
     //! Returns the error message as an optional string
-    std::optional<std::string> errorMessage() const noexcept;
+    const std::string& errorMessage() const noexcept;
 
     //!@}
 
@@ -116,21 +115,21 @@ private:
     //!@}
 
     //! Error message (optional string)
-    std::optional<std::string> m_errorMessage;
+    std::string m_errorMessage;
 };
 
 inline UDPSender::UDPSender(const std::string& host,
                             const uint16_t port,
-                            const std::optional<uint64_t> batchsize) noexcept
+                            const uint64_t batchsize) noexcept
     : m_host(host), m_port(port) {
     // If batching is on, use a dedicated thread to send every now and then
-    if (batchsize) {
+    if (batchsize != std::numeric_limits<uint64_t>::max()) {
         // Thread' sleep duration between batches
         // TODO: allow to input this
         constexpr unsigned int batchingWait{1000U};
 
         m_batching = true;
-        m_batchsize = batchsize.value();
+        m_batchsize = batchsize;
 
         // Define the batching thread
         m_batchingThread = std::thread([this, batchingWait] {
@@ -185,20 +184,18 @@ inline void UDPSender::send(const std::string& message) noexcept {
         if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
             m_batchingMessageQueue.push_back(message);
         } else {
-            std::rbegin(m_batchingMessageQueue)->append("\n").append(message);
+            m_batchingMessageQueue.rbegin()->append("\n").append(message);
         }
     } else {
         sendToDaemon(message);
     }
 }
 
-inline std::optional<std::string> UDPSender::errorMessage() const noexcept {
+inline const std::string& UDPSender::errorMessage() const noexcept {
     return m_errorMessage;
 }
 
 inline bool UDPSender::initialize() noexcept {
-    using namespace std::string_literals;
-
     if (m_isInitialized) {
         return true;
     }
@@ -206,7 +203,7 @@ inline bool UDPSender::initialize() noexcept {
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (m_socket == -1) {
-        m_errorMessage = "Could not create socket, err="s + std::strerror(errno);
+        m_errorMessage = std::string("Could not create socket, err=") + std::strerror(errno);
         return false;
     }
 
@@ -230,7 +227,7 @@ inline bool UDPSender::initialize() noexcept {
             // An error code has been returned by getaddrinfo
             close(m_socket);
             m_socket = -1;
-            m_errorMessage = "getaddrinfo failed: error="s + std::to_string(ret) + ", msg=" + gai_strerror(ret);
+            m_errorMessage = "getaddrinfo failed: error=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
         }
 
@@ -256,9 +253,8 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
     const long int ret{
         sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
     if (ret == -1) {
-        using namespace std::string_literals;
         m_errorMessage =
-            "sendto server failed: host="s + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
+            "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
     }
 }
 

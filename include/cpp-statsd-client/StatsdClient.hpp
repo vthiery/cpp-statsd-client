@@ -2,7 +2,6 @@
 #define STATSD_CLIENT_HPP
 
 #include <cstdlib>
-#include <optional>
 #include <string>
 #include "UDPSender.hpp"
 
@@ -28,7 +27,7 @@ public:
     StatsdClient(const std::string& host,
                  const uint16_t port,
                  const std::string& prefix,
-                 const std::optional<uint64_t> batchsize = std::nullopt) noexcept;
+                 const uint64_t batchsize = std::numeric_limits<uint64_t>::max()) noexcept;
 
     //!@}
 
@@ -39,7 +38,7 @@ public:
     void setConfig(const std::string& host, const uint16_t port, const std::string& prefix) noexcept;
 
     //! Returns the error message as an optional std::string
-    std::optional<std::string> errorMessage() const noexcept;
+    const std::string& errorMessage() const noexcept;
 
     //! Increments the key, at a given frequency rate
     void increment(const std::string& key, const float frequency = 1.0f) const noexcept;
@@ -73,7 +72,7 @@ private:
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
-                                  const std::optional<uint64_t> batchsize) noexcept
+                                  const uint64_t batchsize) noexcept
     : m_prefix(prefix), m_sender(host, port, batchsize) {
     // Initialize the randorm generator to be used for sampling
     std::srand(time(nullptr));
@@ -84,7 +83,7 @@ inline void StatsdClient::setConfig(const std::string& host, const uint16_t port
     m_sender.setConfig(host, port);
 }
 
-inline std::optional<std::string> StatsdClient::errorMessage() const noexcept {
+inline const std::string& StatsdClient::errorMessage() const noexcept {
     return m_sender.errorMessage();
 }
 

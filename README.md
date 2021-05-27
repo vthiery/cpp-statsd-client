@@ -3,7 +3,7 @@
 ![logo](https://raw.githubusercontent.com/vthiery/cpp-statsd-client/master/images/logo.svg?sanitize=true)
 
 [![Download](https://api.bintray.com/packages/vthiery/conan-packages/statsdclient%3Avthiery/images/download.svg)](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion)
-[![Build Status](https://travis-ci.org/vthiery/cpp-statsd-client.svg?branch=master)](https://travis-ci.org/vthiery/cpp-statsd-client)
+![Build Status](https://github.com/vthiery/cpp-statsd-client/actions/workflows/linux/badge.svg)
 [![Github Issues](https://img.shields.io/github/issues/vthiery/cpp-statsd-client.svg)](https://github.com/vthiery/cpp-statsd-client/issues)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/vthiery/cpp-statsd-client.svg)](http://isitmaintained.com/project/vthiery/cpp-statsd-client "Average time to resolve an issue")
 

@@ -11,27 +11,27 @@ int main() {
 
     // Increment "coco"
     client.increment("coco");
-    assert(!client.errorMessage());
+    assert(client.errorMessage().empty());
 
     // Decrement "kiki"
     client.decrement("kiki");
-    assert(!client.errorMessage());
+    assert(client.errorMessage().empty());
 
     // Adjusts "toto" by +3
     client.count("toto", 2, 0.1f);
-    assert(!client.errorMessage());
+    assert(client.errorMessage().empty());
 
     // Record a gauge "titi" to 3
     client.gauge("titi", 3);
-    assert(!client.errorMessage());
+    assert(client.errorMessage().empty());
 
     // Record a timing of 2ms for "myTiming"
     client.timing("myTiming", 2, 0.1f);
-    assert(!client.errorMessage());
+    assert(client.errorMessage().empty());
 
     // Send a metric explicitly
     client.send("tutu", 4, "c", 2.0f);
-    assert(!client.errorMessage());
+    assert(client.errorMessage().empty());
 
     return EXIT_SUCCESS;
 }
