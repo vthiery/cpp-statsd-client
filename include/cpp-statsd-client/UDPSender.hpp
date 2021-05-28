@@ -32,7 +32,7 @@ public:
     //! Constructor
     UDPSender(const std::string& host,
               const uint16_t port,
-              const uint64_t batchsize = std::numeric_limits<uint64_t>::max()) noexcept;
+              const uint64_t batchsize = 0) noexcept;
 
     //! Destructor
     ~UDPSender();
@@ -123,7 +123,7 @@ inline UDPSender::UDPSender(const std::string& host,
                             const uint64_t batchsize) noexcept
     : m_host(host), m_port(port) {
     // If batching is on, use a dedicated thread to send every now and then
-    if (batchsize != std::numeric_limits<uint64_t>::max()) {
+    if (batchsize != 0) {
         // Thread' sleep duration between batches
         // TODO: allow to input this
         constexpr unsigned int batchingWait{1000U};

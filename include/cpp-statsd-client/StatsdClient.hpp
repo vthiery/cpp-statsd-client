@@ -27,7 +27,7 @@ public:
     StatsdClient(const std::string& host,
                  const uint16_t port,
                  const std::string& prefix,
-                 const uint64_t batchsize = std::numeric_limits<uint64_t>::max()) noexcept;
+                 const uint64_t batchsize = 0) noexcept;
 
     //!@}
 
