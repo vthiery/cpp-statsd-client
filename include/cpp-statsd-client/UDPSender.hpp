@@ -42,13 +42,10 @@ public:
     //!@name Methods
     //!@{
 
-    //! Sets a configuration { host, port }
-    void setConfig(const std::string& host, const uint16_t port) noexcept;
-
     //! Send a message
     void send(const std::string& message) noexcept;
 
-    //! Returns the error message as an optional string
+    //! Returns the error message as an string
     const std::string& errorMessage() const noexcept;
 
     //!@}
@@ -68,9 +65,6 @@ private:
 private:
     // @name State variables
     // @{
-
-    //! Is the sender initialized?
-    bool m_isInitialized{false};
 
     //! Shall we exit?
     std::atomic<bool> m_mustExit{false};
@@ -122,6 +116,10 @@ inline UDPSender::UDPSender(const std::string& host,
                             const uint16_t port,
                             const uint64_t batchsize) noexcept
     : m_host(host), m_port(port) {
+
+    // Initialize the socket
+    initialize();
+
     // If batching is on, use a dedicated thread to send every now and then
     if (batchsize != 0) {
         // Thread' sleep duration between batches
@@ -165,19 +163,8 @@ inline UDPSender::~UDPSender() {
     }
 }
 
-inline void UDPSender::setConfig(const std::string& host, const uint16_t port) noexcept {
-    m_host = host;
-    m_port = port;
-
-    m_isInitialized = false;
-
-    if (m_socket >= 0) {
-        close(m_socket);
-    }
-    m_socket = -1;
-}
-
 inline void UDPSender::send(const std::string& message) noexcept {
+    m_errorMessage.clear();
     // If batching is on, accumulate messages in the queue
     if (m_batching) {
         std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
@@ -196,10 +183,6 @@ inline const std::string& UDPSender::errorMessage() const noexcept {
 }
 
 inline bool UDPSender::initialize() noexcept {
-    if (m_isInitialized) {
-        return true;
-    }
-
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (m_socket == -1) {
@@ -239,16 +222,10 @@ inline bool UDPSender::initialize() noexcept {
         freeaddrinfo(results);
     }
 
-    m_isInitialized = true;
     return true;
 }
 
 inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
-    // Can't send until the sender is initialized
-    if (!initialize()) {
-        return;
-    }
-
     // Try sending the message
     const long int ret{
         sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};

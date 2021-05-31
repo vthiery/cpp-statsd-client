@@ -98,7 +98,7 @@ The batchsize is the only parameter that cannot be changed for the time being.
 The client supports batching of the metrics:
 
 - the unit of the batching parameter is bytes,
-- it is optional and not setting it will result in an immediate send of any metrics,
+- it is optional and passing a 0 will result in an immediate send of any metrics,
 
 If set, the UDP sender will spawn a thread sending the metrics to the server every 1 second by aggregates. The aggregation logic is as follows:
 
