@@ -3,7 +3,7 @@
 ![logo](https://raw.githubusercontent.com/vthiery/cpp-statsd-client/master/images/logo.svg?sanitize=true)
 
 [![Download](https://api.bintray.com/packages/vthiery/conan-packages/statsdclient%3Avthiery/images/download.svg)](https://bintray.com/vthiery/conan-packages/statsdclient%3Avthiery/_latestVersion)
-[![Build Status](https://travis-ci.org/vthiery/cpp-statsd-client.svg?branch=master)](https://travis-ci.org/vthiery/cpp-statsd-client)
+[![Build Status](https://github.com/vthiery/cpp-statsd-client/actions/workflows/linux/badge.svg)](https://github.com/vthiery/cpp-statsd-client/actions?workflow=linux)
 [![Github Issues](https://img.shields.io/github/issues/vthiery/cpp-statsd-client.svg)](https://github.com/vthiery/cpp-statsd-client/issues)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/vthiery/cpp-statsd-client.svg)](http://isitmaintained.com/project/vthiery/cpp-statsd-client "Average time to resolve an issue")
 
@@ -98,7 +98,7 @@ The batchsize is the only parameter that cannot be changed for the time being.
 The client supports batching of the metrics:
 
 - the unit of the batching parameter is bytes,
-- it is optional and not setting it will result in an immediate send of any metrics,
+- it is optional and passing a 0 will result in an immediate send of any metrics,
 
 If set, the UDP sender will spawn a thread sending the metrics to the server every 1 second by aggregates. The aggregation logic is as follows:
 

@@ -2,8 +2,8 @@
 #define STATSD_CLIENT_HPP
 
 #include <cstdlib>
-#include <optional>
 #include <string>
+#include <memory>
 #include "UDPSender.hpp"
 
 namespace Statsd {
@@ -28,18 +28,21 @@ public:
     StatsdClient(const std::string& host,
                  const uint16_t port,
                  const std::string& prefix,
-                 const std::optional<uint64_t> batchsize = std::nullopt) noexcept;
+                 const uint64_t batchsize = 0) noexcept;
+
+    StatsdClient(const StatsdClient&) = delete;
+    StatsdClient& operator=(const StatsdClient&) = delete;
 
     //!@}
 
     //!@name Methods
     //!@{
 
-    //! Sets a configuration { host, port, prefix }
-    void setConfig(const std::string& host, const uint16_t port, const std::string& prefix) noexcept;
+    //! Sets a configuration { host, port, prefix, batchsize }
+    void setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize = 0) noexcept;
 
-    //! Returns the error message as an optional std::string
-    std::optional<std::string> errorMessage() const noexcept;
+    //! Returns the error message as an std::string
+    const std::string& errorMessage() const noexcept;
 
     //! Increments the key, at a given frequency rate
     void increment(const std::string& key, const float frequency = 1.0f) const noexcept;
@@ -67,25 +70,25 @@ private:
     std::string m_prefix;
 
     //! The UDP sender to be used for actual sending
-    mutable UDPSender m_sender;
+    std::unique_ptr<UDPSender> m_sender;
 };
 
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
-                                  const std::optional<uint64_t> batchsize) noexcept
-    : m_prefix(prefix), m_sender(host, port, batchsize) {
-    // Initialize the randorm generator to be used for sampling
+                                  const uint64_t batchsize) noexcept
+    : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}) {
+    // Initialize the random generator to be used for sampling
     std::srand(time(nullptr));
 }
 
-inline void StatsdClient::setConfig(const std::string& host, const uint16_t port, const std::string& prefix) noexcept {
+inline void StatsdClient::setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize) noexcept {
     m_prefix = prefix;
-    m_sender.setConfig(host, port);
+    m_sender.reset(new UDPSender(host, port, batchsize));
 }
 
-inline std::optional<std::string> StatsdClient::errorMessage() const noexcept {
-    return m_sender.errorMessage();
+inline const std::string& StatsdClient::errorMessage() const noexcept {
+    return m_sender->errorMessage();
 }
 
 inline void StatsdClient::decrement(const std::string& key, const float frequency) const noexcept {
@@ -137,7 +140,7 @@ inline void StatsdClient::send(const std::string& key,
     }
 
     // Send the message via the UDP sender
-    m_sender.send(buffer);
+    m_sender->send(buffer);
 }
 
 }  // namespace Statsd
