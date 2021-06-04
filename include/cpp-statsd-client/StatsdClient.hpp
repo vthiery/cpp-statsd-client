@@ -1,9 +1,10 @@
 #ifndef STATSD_CLIENT_HPP
 #define STATSD_CLIENT_HPP
 
-#include <cstdlib>
-#include <string>
+#include <cstdio>
 #include <memory>
+#include <random>
+#include <string>
 #include "UDPSender.hpp"
 
 namespace Statsd {
@@ -63,6 +64,9 @@ public:
     void send(const std::string& key, const int value, const std::string& type, const float frequency = 1.0f) const
         noexcept;
 
+    //! Seed the RNG that controls sampling
+    void seed(unsigned int seed = std::random_device()()) noexcept;
+
     //!@}
 
 private:
@@ -71,7 +75,12 @@ private:
 
     //! The UDP sender to be used for actual sending
     std::unique_ptr<UDPSender> m_sender;
+
+    //! The random number generator for handling sampling
+    static thread_local std::mt19937 m_random_engine;
 };
+
+thread_local std::mt19937 StatsdClient::m_random_engine;
 
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
@@ -79,7 +88,7 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint64_t batchsize) noexcept
     : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}) {
     // Initialize the random generator to be used for sampling
-    std::srand(time(nullptr));
+    seed();
 }
 
 inline void StatsdClient::setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize) noexcept {
@@ -116,31 +125,43 @@ inline void StatsdClient::send(const std::string& key,
                                const int value,
                                const std::string& type,
                                const float frequency) const noexcept {
-    const auto isFrequencyOne = [](const float frequency) noexcept {
-        constexpr float epsilon{0.0001f};
-        return std::fabs(frequency - 1.0f) < epsilon;
-    };
+    constexpr float epsilon{0.0001f};
+    const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
 
-    // Test if one should send or not, according to the frequency rate
-    if (!isFrequencyOne(frequency)) {
-        if (frequency < static_cast<float>(std::rand()) / RAND_MAX) {
-            return;
-        }
+    // If you are sampling at a rate less than 1 (ie not sending every metric) and the RNG is above the sampling rate
+    // then we don't need to send this metric this time
+    if (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(m_random_engine))) {
+        return;
     }
 
-    // Prepare the buffer, with a sampling rate if specified different from 1.0f
-    char buffer[256];
-    if (isFrequencyOne(frequency)) {
+    // Prepare the buffer and include the sampling rate if it's not 1.f
+    std::string buffer(256, '\0');
+    if (isFrequencyOne) {
         // Sampling rate is 1.0f, no need to specify it
-        std::snprintf(buffer, sizeof(buffer), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
+        size_t string_len = std::snprintf(
+            &buffer.front(), buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
+        // Trim the trailing null chars
+        buffer.resize(std::min(string_len, buffer.size()));
     } else {
         // Sampling rate is different from 1.0f, hence specify it
-        std::snprintf(
-            buffer, sizeof(buffer), "%s%s:%d|%s|@%.2f", m_prefix.c_str(), key.c_str(), value, type.c_str(), frequency);
+        size_t string_len = std::snprintf(&buffer.front(),
+                                          buffer.size(),
+                                          "%s%s:%d|%s|@%.2f",
+                                          m_prefix.c_str(),
+                                          key.c_str(),
+                                          value,
+                                          type.c_str(),
+                                          frequency);
+        // Trim the trailing null chars
+        buffer.resize(std::min(string_len, buffer.size()));
     }
 
     // Send the message via the UDP sender
     m_sender->send(buffer);
+}
+
+inline void StatsdClient::seed(unsigned int seed) noexcept {
+    m_random_engine.seed(seed);
 }
 
 }  // namespace Statsd
