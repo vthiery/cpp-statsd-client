@@ -2,12 +2,22 @@
 #define STATSD_CLIENT_HPP
 
 #include <cstdio>
+#include <cstdint>
 #include <memory>
 #include <random>
 #include <string>
 #include "UDPSender.hpp"
 
 namespace Statsd {
+
+// All the possible metric types indexed by their enum value
+enum class MetricType : uint8_t {
+    COUNTER = 0,
+    GAUGE = 1,
+    TIMER = 2,
+};
+constexpr const char* MetricNames[] = {"c", "g", "ms"};
+
 /*!
  *
  * Statsd client
@@ -63,7 +73,7 @@ public:
     void timing(const std::string& key, const unsigned int ms, const float frequency = 1.0f) const noexcept;
 
     //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string& key, const int value, const std::string& type, const float frequency = 1.0f) const
+    void send(const std::string& key, const int value, const MetricType type, const float frequency = 1.0f) const
         noexcept;
 
     //! Seed the RNG that controls sampling
@@ -116,21 +126,21 @@ inline void StatsdClient::increment(const std::string& key, const float frequenc
 }
 
 inline void StatsdClient::count(const std::string& key, const int delta, const float frequency) const noexcept {
-    return send(key, delta, "c", frequency);
+    return send(key, delta, MetricType::COUNTER, frequency);
 }
 
 inline void StatsdClient::gauge(const std::string& key, const unsigned int value, const float frequency) const
     noexcept {
-    return send(key, value, "g", frequency);
+    return send(key, value, MetricType::GAUGE, frequency);
 }
 
 inline void StatsdClient::timing(const std::string& key, const unsigned int ms, const float frequency) const noexcept {
-    return send(key, ms, "ms", frequency);
+    return send(key, ms, MetricType::TIMER, frequency);
 }
 
 inline void StatsdClient::send(const std::string& key,
                                const int value,
-                               const std::string& type,
+                               const MetricType type,
                                const float frequency) const noexcept {
     constexpr float epsilon{0.0001f};
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
@@ -146,18 +156,23 @@ inline void StatsdClient::send(const std::string& key,
     int string_len = -1;
     if (isFrequencyOne) {
         // Sampling rate is 1.0f, no need to specify it
-        string_len = std::snprintf(
-            &buffer.front(), buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
+        string_len = std::snprintf(&buffer.front(),
+                                   buffer.size(),
+                                   "%s%s:%d|%s",
+                                   m_prefix.c_str(),
+                                   key.c_str(),
+                                   value,
+                                   MetricNames[static_cast<uint8_t>(type)]);
     } else {
         // Sampling rate is different from 1.0f, hence specify it
         string_len = std::snprintf(&buffer.front(),
-                                          buffer.size(),
-                                          "%s%s:%d|%s|@%.2f",
-                                          m_prefix.c_str(),
-                                          key.c_str(),
-                                          value,
-                                          type.c_str(),
-                                          frequency);
+                                   buffer.size(),
+                                   "%s%s:%d|%s|@%.2f",
+                                   m_prefix.c_str(),
+                                   key.c_str(),
+                                   value,
+                                   MetricNames[static_cast<uint8_t>(type)],
+                                   frequency);
     }
 
     // A valid metric must be at least 4 chars in length ie :n|c
