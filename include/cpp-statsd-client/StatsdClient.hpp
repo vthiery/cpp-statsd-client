@@ -16,8 +16,8 @@ namespace Statsd {
  * and relying on a UDP sender for the actual sending.
  *
  * The sampling frequency can be input, as well as the
- * batching size. The latter is optional and shall not be
- * set if batching is not desired.
+ * batching size. The latter is optional and shall be
+ * set to 0 if batching is not desired.
  *
  */
 class StatsdClient {
@@ -87,6 +87,13 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const std::string& prefix,
                                   const uint64_t batchsize) noexcept
     : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}) {
+    // TODO: the final metric strings do not automatically place a '.' between the prefix and the key
+    //  This might be unexpected to end users. We should either document this or we could just add the
+    //  automatic '.' when the prefix is non empty
+    //if(!m_prefix.empty()) {
+    //    m_prefix.push_back('.');
+    //}
+
     // Initialize the random generator to be used for sampling
     seed();
 }
@@ -136,15 +143,14 @@ inline void StatsdClient::send(const std::string& key,
 
     // Prepare the buffer and include the sampling rate if it's not 1.f
     std::string buffer(256, '\0');
+    int string_len = -1;
     if (isFrequencyOne) {
         // Sampling rate is 1.0f, no need to specify it
-        size_t string_len = std::snprintf(
+        string_len = std::snprintf(
             &buffer.front(), buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
-        // Trim the trailing null chars
-        buffer.resize(std::min(string_len, buffer.size()));
     } else {
         // Sampling rate is different from 1.0f, hence specify it
-        size_t string_len = std::snprintf(&buffer.front(),
+        string_len = std::snprintf(&buffer.front(),
                                           buffer.size(),
                                           "%s%s:%d|%s|@%.2f",
                                           m_prefix.c_str(),
@@ -152,9 +158,17 @@ inline void StatsdClient::send(const std::string& key,
                                           value,
                                           type.c_str(),
                                           frequency);
-        // Trim the trailing null chars
-        buffer.resize(std::min(string_len, buffer.size()));
     }
+
+    // A valid metric must be at least 6 chars in length
+    if(string_len < 6){
+        //TODO: we dont have access to the error message here
+        return;
+    }
+
+    // Trim the trailing null chars
+    // TODO: perf improvement: send the len along and keep the buffer around as a member variable
+    buffer.resize(std::min(string_len, static_cast<int>(buffer.size())));
 
     // Send the message via the UDP sender
     m_sender->send(buffer);
