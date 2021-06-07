@@ -120,7 +120,7 @@ inline UDPSender::UDPSender(const std::string& host,
     // Initialize the socket
     initialize();
 
-    // If batching is on, use a dedicated thread to send when the batch is full
+    // If batching is on, use a dedicated thread to send after the wait time is reached
     if (batchsize != 0) {
         // Thread' sleep duration between batches
         // TODO: allow to input this
