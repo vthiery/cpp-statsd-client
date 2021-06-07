@@ -1,6 +1,11 @@
 #ifndef STATSD_SERVER_HPP
 #define STATSD_SERVER_HPP
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <string>
+
 // TODO: should we actually add this to the distributed headers? With a tiny bit of work
 //  someone could write their own c++ statsd server
 
@@ -27,6 +32,11 @@ public:
             return;
         }
     }
+    ~StatsdServer() {
+        if (m_fd != -1)
+            close(m_fd);
+    }
+
 
     const std::string& errorMessage() const noexcept {
         return m_errorMessage;

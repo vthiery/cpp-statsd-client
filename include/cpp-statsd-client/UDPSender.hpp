@@ -120,7 +120,7 @@ inline UDPSender::UDPSender(const std::string& host,
     // Initialize the socket
     initialize();
 
-    // If batching is on, use a dedicated thread to send every now and then
+    // If batching is on, use a dedicated thread to send when the batch is full
     if (batchsize != 0) {
         // Thread' sleep duration between batches
         // TODO: allow to input this
@@ -131,6 +131,7 @@ inline UDPSender::UDPSender(const std::string& host,
 
         // Define the batching thread
         m_batchingThread = std::thread([this, batchingWait] {
+            // TODO: this will drop unsent stats, should we send all the unsent stats before we exit?
             while (!m_mustExit.load(std::memory_order_acq_rel)) {
                 std::deque<std::string> stagedMessageQueue;
 

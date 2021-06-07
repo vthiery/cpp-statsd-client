@@ -16,8 +16,10 @@ namespace Statsd {
  * and relying on a UDP sender for the actual sending.
  *
  * The sampling frequency can be input, as well as the
- * batching size. The latter is optional and shall be
- * set to 0 if batching is not desired.
+ * batching size. The latter is the optional limit in
+ * number of bytes a batch of stats can be before it is
+ * new states are added to a fresh batch. A value of 0
+ * means batching is disabled.
  *
  */
 class StatsdClient {
@@ -65,7 +67,7 @@ public:
         noexcept;
 
     //! Seed the RNG that controls sampling
-    static void seed(unsigned int seed = std::random_device()()) noexcept;
+    void seed(unsigned int seed = std::random_device()()) noexcept;
 
     //!@}
 
@@ -77,10 +79,8 @@ private:
     std::unique_ptr<UDPSender> m_sender;
 
     //! The random number generator for handling sampling
-    static thread_local std::mt19937 m_random_engine;
+    mutable std::mt19937 m_random_engine;
 };
-
-thread_local std::mt19937 StatsdClient::m_random_engine;
 
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
@@ -160,8 +160,8 @@ inline void StatsdClient::send(const std::string& key,
                                           frequency);
     }
 
-    // A valid metric must be at least 6 chars in length
-    if (string_len < 6) {
+    // A valid metric must be at least 4 chars in length ie :n|c
+    if (string_len < 4) {
         //TODO: we dont have access to the error message here
         return;
     }
