@@ -94,6 +94,10 @@ void testSendRecv(uint64_t batchSize) {
         throwOnError(client);
         expected.emplace_back("sendRecv.toto:2|c|@0.10");
 
+        // Gets "sampled out" by the random number generator
+        client.count("popo", 9, 0.1f);
+        throwOnError(client);
+
         // Record a gauge "titi" to 3
         client.gauge("titi", 3);
         throwOnError(client);
