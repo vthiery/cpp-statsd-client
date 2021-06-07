@@ -23,6 +23,4 @@ jobs:
         shell: bash
         run: |
           export LD_LIBRARY_PATH=.:$(cat /etc/ld.so.conf.d/* | grep -vF "#" | tr "\\n" ":" | sed -e "s/:$//g")
-          #TODO: run statsd to collect these test metrics
           ./testStatsdClient
-          #TODO: validate test metrics received

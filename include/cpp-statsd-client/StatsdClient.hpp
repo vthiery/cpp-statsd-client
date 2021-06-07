@@ -65,7 +65,7 @@ public:
         noexcept;
 
     //! Seed the RNG that controls sampling
-    void seed(unsigned int seed = std::random_device()()) noexcept;
+    static void seed(unsigned int seed = std::random_device()()) noexcept;
 
     //!@}
 
@@ -161,7 +161,7 @@ inline void StatsdClient::send(const std::string& key,
     }
 
     // A valid metric must be at least 6 chars in length
-    if(string_len < 6){
+    if (string_len < 6) {
         //TODO: we dont have access to the error message here
         return;
     }
