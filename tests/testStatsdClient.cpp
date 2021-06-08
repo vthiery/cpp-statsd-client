@@ -110,7 +110,6 @@ void testSendRecv(uint64_t batchSize) {
         throwOnError(client);
         expected.emplace_back("sendRecv.myTiming:2|ms|@0.10");
 
-        // TODO: should sampling rates above 1 error or be capped?
         // Send a metric explicitly
         client.send("tutu", 4, "c", 2.0f);
         throwOnError(client);
