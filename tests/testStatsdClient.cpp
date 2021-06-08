@@ -114,7 +114,7 @@ void testSendRecv(uint64_t batchSize) {
         // Send a metric explicitly
         client.send("tutu", 4, "c", 2.0f);
         throwOnError(client);
-        expected.emplace_back("sendRecv.tutu:4|c|@2.00");
+        expected.emplace_back("sendRecv.tutu:4|c");
     }
 
     // Signal the mock server we are done

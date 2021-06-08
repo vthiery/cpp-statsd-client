@@ -53,25 +53,22 @@ public:
     const std::string& errorMessage() const noexcept;
 
     //! Increments the key, at a given frequency rate
-    void increment(const std::string& key, const float frequency = 1.0f) const noexcept;
+    void increment(const std::string& key, float frequency = 1.0f) const noexcept;
 
     //! Increments the key, at a given frequency rate
-    void decrement(const std::string& key, const float frequency = 1.0f) const noexcept;
+    void decrement(const std::string& key, float frequency = 1.0f) const noexcept;
 
     //! Adjusts the specified key by a given delta, at a given frequency rate
-    void count(const std::string& key, const int delta, const float frequency = 1.0f) const noexcept;
+    void count(const std::string& key, const int delta, float frequency = 1.0f) const noexcept;
 
     //! Records a gauge for the key, with a given value, at a given frequency rate
-    void gauge(const std::string& key, const unsigned int value, const float frequency = 1.0f) const noexcept;
+    void gauge(const std::string& key, const unsigned int value, float frequency = 1.0f) const noexcept;
 
     //! Records a timing for a key, at a given frequency
-    void timing(const std::string& key, const unsigned int ms, const float frequency = 1.0f) const noexcept;
+    void timing(const std::string& key, const unsigned int ms, float frequency = 1.0f) const noexcept;
 
     //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string& key,
-              const int value,
-              const std::string& type,
-              const float frequency = 1.0f) const noexcept;
+    void send(const std::string& key, const int value, const std::string& type, float frequency = 1.0f) const noexcept;
 
     //! Seed the RNG that controls sampling
     void seed(unsigned int seed = std::random_device()()) noexcept;
@@ -110,15 +107,15 @@ inline const std::string& StatsdClient::errorMessage() const noexcept {
     return m_sender->errorMessage();
 }
 
-inline void StatsdClient::decrement(const std::string& key, const float frequency) const noexcept {
+inline void StatsdClient::decrement(const std::string& key, float frequency) const noexcept {
     return count(key, -1, frequency);
 }
 
-inline void StatsdClient::increment(const std::string& key, const float frequency) const noexcept {
+inline void StatsdClient::increment(const std::string& key, float frequency) const noexcept {
     return count(key, 1, frequency);
 }
 
-inline void StatsdClient::count(const std::string& key, const int delta, const float frequency) const noexcept {
+inline void StatsdClient::count(const std::string& key, const int delta, float frequency) const noexcept {
     return send(key, delta, "c", frequency);
 }
 
@@ -128,25 +125,27 @@ inline void StatsdClient::gauge(const std::string& key,
     return send(key, value, "g", frequency);
 }
 
-inline void StatsdClient::timing(const std::string& key, const unsigned int ms, const float frequency) const noexcept {
+inline void StatsdClient::timing(const std::string& key, const unsigned int ms, float frequency) const noexcept {
     return send(key, ms, "ms", frequency);
 }
 
 inline void StatsdClient::send(const std::string& key,
                                const int value,
                                const std::string& type,
-                               const float frequency) const noexcept {
+                               float frequency) const noexcept {
     // Bail if we can't send anything anyway so bail
     if (!m_sender->initialized()) {
         return;
     }
 
+    // A valid frequency is: 0 <= f <= 1
+    // At 0 you never emit the stat, at 1 you always emit the stat and with anything else you roll the dice
+    frequency = std::max(std::min(frequency, 1.f), 0.f);
     constexpr float epsilon{0.0001f};
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
-
-    // If you are sampling at a rate less than 1 (ie not sending every metric) and the RNG is above the sampling rate
-    // then we don't need to send this metric this time
-    if (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(m_randomEngine))) {
+    const bool isFrequencyZero = std::fabs(frequency) < epsilon;
+    if (isFrequencyZero ||
+        (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(m_randomEngine)))) {
         return;
     }
 
