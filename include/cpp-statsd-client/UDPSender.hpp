@@ -45,7 +45,7 @@ public:
     const std::string& errorMessage() const noexcept;
 
     //! Returns true if the sender is initialized
-    bool isInitialized() const noexcept;
+    bool initialized() const noexcept;
 
     //!@}
 
@@ -117,7 +117,9 @@ private:
 inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize) noexcept
     : m_host(host), m_port(port) {
     // Initialize the socket
-    initialize();
+    if (!initialize()) {
+        return;
+    }
 
     // If batching is on, use a dedicated thread to send after the wait time is reached
     if (batchsize != 0) {
@@ -152,7 +154,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
 }
 
 inline UDPSender::~UDPSender() {
-    if (!isInitialized()) {
+    if (!initialized()) {
         return;
     }
 
@@ -236,7 +238,7 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
     }
 }
 
-inline bool UDPSender::isInitialized() const noexcept {
+inline bool UDPSender::initialized() const noexcept {
     return m_socket != k_invalidFd;
 }
 

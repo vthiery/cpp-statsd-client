@@ -51,13 +51,13 @@ void testReconfigure() {
     StatsdServer server;
 
     StatsdClient client("localhost", 8125, "first.");
-    client.send("foo", 1, MetricType::COUNTER, 1.f);
+    client.send("foo", 1, "c", 1.f);
     if (server.receive() != "first.foo:1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
 
     client.setConfig("localhost", 8125, "second.");
-    client.send("bar", 1, MetricType::COUNTER, 1.f);
+    client.send("bar", 1, "c", 1.f);
     if (server.receive() != "second.bar:1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
@@ -112,13 +112,13 @@ void testSendRecv(uint64_t batchSize) {
 
         // TODO: should sampling rates above 1 error or be capped?
         // Send a metric explicitly
-        client.send("tutu", 4, MetricType::COUNTER, 2.0f);
+        client.send("tutu", 4, "c", 2.0f);
         throwOnError(client);
         expected.emplace_back("sendRecv.tutu:4|c|@2.00");
     }
 
     // Signal the mock server we are done
-    client.send("DONE", 0, MetricType::TIMER);
+    client.send("DONE", 0, "ms");
 
     // Wait for the server to stop
     server.join();

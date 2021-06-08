@@ -10,14 +10,6 @@
 
 namespace Statsd {
 
-// All the possible metric types indexed by their enum value
-enum class MetricType : uint8_t {
-    COUNTER = 0,
-    GAUGE = 1,
-    TIMER = 2,
-};
-constexpr const char* MetricNames[] = {"c", "g", "ms"};
-
 /*!
  *
  * Statsd client
@@ -78,7 +70,7 @@ public:
     //! Send a value for a key, according to its type, at a given frequency
     void send(const std::string& key,
               const int value,
-              const MetricType type,
+              const std::string& type,
               const float frequency = 1.0f) const noexcept;
 
     //! Seed the RNG that controls sampling
@@ -134,25 +126,25 @@ inline void StatsdClient::increment(const std::string& key, const float frequenc
 }
 
 inline void StatsdClient::count(const std::string& key, const int delta, const float frequency) const noexcept {
-    return send(key, delta, MetricType::COUNTER, frequency);
+    return send(key, delta, "c", frequency);
 }
 
 inline void StatsdClient::gauge(const std::string& key,
                                 const unsigned int value,
                                 const float frequency) const noexcept {
-    return send(key, value, MetricType::GAUGE, frequency);
+    return send(key, value, "g", frequency);
 }
 
 inline void StatsdClient::timing(const std::string& key, const unsigned int ms, const float frequency) const noexcept {
-    return send(key, ms, MetricType::TIMER, frequency);
+    return send(key, ms, "ms", frequency);
 }
 
 inline void StatsdClient::send(const std::string& key,
                                const int value,
-                               const MetricType type,
+                               const std::string& type,
                                const float frequency) const noexcept {
     // Bail if we can't send anything anyway so bail
-    if (!m_sender->isInitialized()) {
+    if (!m_sender->initialized()) {
         return;
     }
 
@@ -170,13 +162,8 @@ inline void StatsdClient::send(const std::string& key,
     int string_len = -1;
     if (isFrequencyOne) {
         // Sampling rate is 1.0f, no need to specify it
-        string_len = std::snprintf(&buffer.front(),
-                                   buffer.size(),
-                                   "%s%s:%d|%s",
-                                   m_prefix.c_str(),
-                                   key.c_str(),
-                                   value,
-                                   MetricNames[static_cast<uint8_t>(type)]);
+        string_len = std::snprintf(
+            &buffer.front(), buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
     } else {
         // Sampling rate is different from 1.0f, hence specify it
         string_len = std::snprintf(&buffer.front(),
@@ -185,7 +172,7 @@ inline void StatsdClient::send(const std::string& key,
                                    m_prefix.c_str(),
                                    key.c_str(),
                                    value,
-                                   MetricNames[static_cast<uint8_t>(type)],
+                                   type.c_str(),
                                    frequency);
     }
 
