@@ -175,12 +175,6 @@ inline void StatsdClient::send(const std::string& key,
                                    frequency);
     }
 
-    // A valid metric must be at least 4 chars in length ie :n|c
-    if (string_len < 4) {
-        //TODO: we dont have access to the error message here
-        return;
-    }
-
     // Trim the trailing null chars
     // TODO: perf improvement: send the len along and keep the buffer around as a member variable
     buffer.resize(std::min(string_len, static_cast<int>(buffer.size())));
