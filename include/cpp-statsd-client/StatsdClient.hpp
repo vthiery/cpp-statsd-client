@@ -94,13 +94,6 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const std::string& prefix,
                                   const uint64_t batchsize) noexcept
     : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}) {
-    // TODO: the final metric strings do not automatically place a '.' between the prefix and the key
-    //  This might be unexpected to end users. We should either document this or we could just add the
-    //  automatic '.' when the prefix is non empty
-    // if(!m_prefix.empty()) {
-    //    m_prefix.push_back('.');
-    //}
-
     // Initialize the random generator to be used for sampling
     seed();
 }
