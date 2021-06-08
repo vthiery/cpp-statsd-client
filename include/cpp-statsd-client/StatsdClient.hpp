@@ -1,8 +1,8 @@
 #ifndef STATSD_CLIENT_HPP
 #define STATSD_CLIENT_HPP
 
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <random>
 #include <string>
@@ -52,7 +52,10 @@ public:
     //!@{
 
     //! Sets a configuration { host, port, prefix, batchsize }
-    void setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize = 0) noexcept;
+    void setConfig(const std::string& host,
+                   const uint16_t port,
+                   const std::string& prefix,
+                   const uint64_t batchsize = 0) noexcept;
 
     //! Returns the error message as an std::string
     const std::string& errorMessage() const noexcept;
@@ -73,8 +76,10 @@ public:
     void timing(const std::string& key, const unsigned int ms, const float frequency = 1.0f) const noexcept;
 
     //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string& key, const int value, const MetricType type, const float frequency = 1.0f) const
-        noexcept;
+    void send(const std::string& key,
+              const int value,
+              const MetricType type,
+              const float frequency = 1.0f) const noexcept;
 
     //! Seed the RNG that controls sampling
     void seed(unsigned int seed = std::random_device()()) noexcept;
@@ -89,7 +94,7 @@ private:
     std::unique_ptr<UDPSender> m_sender;
 
     //! The random number generator for handling sampling
-    mutable std::mt19937 m_random_engine;
+    mutable std::mt19937 m_randomEngine;
 };
 
 inline StatsdClient::StatsdClient(const std::string& host,
@@ -100,7 +105,7 @@ inline StatsdClient::StatsdClient(const std::string& host,
     // TODO: the final metric strings do not automatically place a '.' between the prefix and the key
     //  This might be unexpected to end users. We should either document this or we could just add the
     //  automatic '.' when the prefix is non empty
-    //if(!m_prefix.empty()) {
+    // if(!m_prefix.empty()) {
     //    m_prefix.push_back('.');
     //}
 
@@ -108,7 +113,10 @@ inline StatsdClient::StatsdClient(const std::string& host,
     seed();
 }
 
-inline void StatsdClient::setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize) noexcept {
+inline void StatsdClient::setConfig(const std::string& host,
+                                    const uint16_t port,
+                                    const std::string& prefix,
+                                    const uint64_t batchsize) noexcept {
     m_prefix = prefix;
     m_sender.reset(new UDPSender(host, port, batchsize));
 }
@@ -129,8 +137,9 @@ inline void StatsdClient::count(const std::string& key, const int delta, const f
     return send(key, delta, MetricType::COUNTER, frequency);
 }
 
-inline void StatsdClient::gauge(const std::string& key, const unsigned int value, const float frequency) const
-    noexcept {
+inline void StatsdClient::gauge(const std::string& key,
+                                const unsigned int value,
+                                const float frequency) const noexcept {
     return send(key, value, MetricType::GAUGE, frequency);
 }
 
@@ -142,12 +151,17 @@ inline void StatsdClient::send(const std::string& key,
                                const int value,
                                const MetricType type,
                                const float frequency) const noexcept {
+    // Bail if we can't send anything anyway so bail
+    if (!m_sender->isInitialized()) {
+        return;
+    }
+
     constexpr float epsilon{0.0001f};
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
 
     // If you are sampling at a rate less than 1 (ie not sending every metric) and the RNG is above the sampling rate
     // then we don't need to send this metric this time
-    if (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(m_random_engine))) {
+    if (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(m_randomEngine))) {
         return;
     }
 
@@ -184,7 +198,7 @@ inline void StatsdClient::send(const std::string& key,
 }
 
 inline void StatsdClient::seed(unsigned int seed) noexcept {
-    m_random_engine.seed(seed);
+    m_randomEngine.seed(seed);
 }
 
 }  // namespace Statsd

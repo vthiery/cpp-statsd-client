@@ -30,7 +30,7 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
     } while (server.errorMessage().empty() && !messages.back().empty());
 }
 
-//TODO: would it be ok if we change the API of the client to throw on error instead of having to check a string?
+// TODO: would it be ok if we change the API of the client to throw on error instead of having to check a string?
 void throwOnError(const StatsdClient& client) {
     if (!client.errorMessage().empty()) {
         std::cerr << client.errorMessage() << std::endl;
@@ -52,14 +52,15 @@ void testReconfigure() {
 
     StatsdClient client("localhost", 8125, "first.");
     client.send("foo", 1, MetricType::COUNTER, 1.f);
-    if(server.receive() != "first.foo:1|c")
+    if (server.receive() != "first.foo:1|c") {
         throw std::runtime_error("Incorrect stat received");
-
+    }
 
     client.setConfig("localhost", 8125, "second.");
     client.send("bar", 1, MetricType::COUNTER, 1.f);
-    if(server.receive() != "second.bar:1|c")
+    if (server.receive() != "second.bar:1|c") {
         throw std::runtime_error("Incorrect stat received");
+    }
 
     // TODO: test what happens with the batching after resolving the question about incomplete
     //  batches being dropped vs sent on reconfiguring
@@ -77,7 +78,7 @@ void testSendRecv(uint64_t batchSize) {
     // TODO: I forget if we need to wait for the server to be ready here before sending the first stats
     //  is there a race condition where the client sending before the server binds would drop that clients message
 
-    for(int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         // Increment "coco"
         client.increment("coco");
         throwOnError(client);
@@ -115,7 +116,7 @@ void testSendRecv(uint64_t batchSize) {
         throwOnError(client);
         expected.emplace_back("sendRecv.tutu:4|c|@2.00");
     }
-    
+
     // Signal the mock server we are done
     client.send("DONE", 0, MetricType::TIMER);
 
@@ -123,19 +124,18 @@ void testSendRecv(uint64_t batchSize) {
     server.join();
 
     // Make sure we get the exactly correct output
-    if(messages != expected) {
+    if (messages != expected) {
         std::cerr << "Unexpected stats received by server, got:" << std::endl;
-        for(const auto& message : messages) {
+        for (const auto& message : messages) {
             std::cerr << message << std::endl;
         }
         std::cerr << std::endl << "But we expected:" << std::endl;
-        for(const auto& message : expected) {
+        for (const auto& message : expected) {
             std::cerr << message << std::endl;
         }
         throw std::runtime_error("Unexpected stats");
     }
 }
-
 
 int main(int argc, char** argv) {
     // If any of these tests fail they throw an exception, not catching makes for a nonzero return code
@@ -148,7 +148,6 @@ int main(int argc, char** argv) {
     testSendRecv(0);
     // background batching
     testSendRecv(4);
-
 
     return EXIT_SUCCESS;
 }
