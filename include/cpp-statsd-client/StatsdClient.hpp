@@ -133,7 +133,7 @@ inline void StatsdClient::send(const std::string& key,
                                const int value,
                                const std::string& type,
                                float frequency) const noexcept {
-    // Bail if we can't send anything anyway so bail
+    // Bail if we can't send anything anyway
     if (!m_sender->initialized()) {
         return;
     }
