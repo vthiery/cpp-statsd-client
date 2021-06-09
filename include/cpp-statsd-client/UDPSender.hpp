@@ -30,9 +30,7 @@ public:
     //!@{
 
     //! Constructor
-    UDPSender(const std::string& host,
-              const uint16_t port,
-              const uint64_t batchsize = 0) noexcept;
+    UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize = 0) noexcept;
 
     //! Destructor
     ~UDPSender();
@@ -112,11 +110,8 @@ private:
     std::string m_errorMessage;
 };
 
-inline UDPSender::UDPSender(const std::string& host,
-                            const uint16_t port,
-                            const uint64_t batchsize) noexcept
+inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize) noexcept
     : m_host(host), m_port(port) {
-
     // Initialize the socket
     initialize();
 
