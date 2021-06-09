@@ -40,7 +40,7 @@ If you are using [Conan](https://www.conan.io/) to manage your dependencies, mer
 A simple example of how to use the client:
 
 ```cpp
-#include <statsd-cpp-client/StatsdClient.hpp>
+#include "StatsdClient.hpp"
 using namespace Statsd;
 
 int main() {
