@@ -40,11 +40,10 @@ If you are using [Conan](https://www.conan.io/) to manage your dependencies, mer
 A simple example of how to use the client:
 
 ```cpp
-#include "StatsdClient.hpp"
+#include <statsd-cpp-client/StatsdClient.hpp>
 using namespace Statsd;
 
-int main()
-{
+int main() {
     // Define the client on localhost, with port 8080, using a prefix and a batching size of 20 bytes
     StatsdClient client{ "127.0.0.1", 8080, "myPrefix.", 20 };
 
@@ -65,6 +64,38 @@ int main()
 
     // Send a metric explicitly
     client.send("tutu", 4, "c", 2.0f);
+    exit(0);
+}
+```
+
+### Advanced Testing
+
+A simple mock StatsD server can be found at `tests/StatsdServer.hpp`. This can be used to do simple validation of your application's metrics, typically in the form of unit tests. In fact this is the primary means by which this library is tested. The mock server itself is not distributed with the library so to use it you'd need to vendor this project into your project. Once you have though, you can test your application's use of the client like so:
+
+```cpp
+#include "StatsdClient.hpp"
+#include "StatsdServer.hpp"
+
+#include <cassert>
+
+using namespace Statsd;
+
+struct MyApp {
+    void doWork() const {
+        m_client.count("bar", 3);
+    }
+private:
+    StatsdClient m_client{"localhost", 8125, "foo."};
+};
+
+int main() {
+    StatsdServer mockServer;
+
+    MyApp app;
+    app.doWork();
+
+    assert(mockServer.receive() == "foo.bar:3|c");
+    exit(0);
 }
 ```
 
