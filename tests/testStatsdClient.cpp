@@ -1,6 +1,6 @@
-#include <cassert>
-#include <cpp-statsd-client/StatsdClient.hpp>
 #include <iostream>
+
+#include "cpp-statsd-client/StatsdClient.hpp"
 
 using namespace Statsd;
 
