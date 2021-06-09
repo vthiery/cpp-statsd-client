@@ -1,14 +1,11 @@
-name: linux
-on: [pull_request]
+name: Test
 
+on: [push, pull_request]
 jobs:
-  build:
-    name: build and test
+  test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
       - name: dependencies
         shell: bash
         run: |
@@ -18,9 +15,9 @@ jobs:
         shell: bash
         run: |
           export LD_LIBRARY_PATH=.:$(cat /etc/ld.so.conf.d/* | grep -vF "#" | tr "\\n" ":" | sed -e "s/:$//g")
-          cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_SANITIZERS=On && make all -j$(nproc)
+          cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_SANITIZERS=On
+          make all -j$(nproc)
       - name: test
         shell: bash
         run: |
-          export LD_LIBRARY_PATH=.:$(cat /etc/ld.so.conf.d/* | grep -vF "#" | tr "\\n" ":" | sed -e "s/:$//g")
-          ./testStatsdClient
+          make test
