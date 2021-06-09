@@ -1,14 +1,11 @@
-name: linux
-on: [pull_request]
+name: Test
 
+on: [push, pull_request]
 jobs:
-  build:
-    name: build and test
+  test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
       - name: dependencies
         shell: bash
         run: |

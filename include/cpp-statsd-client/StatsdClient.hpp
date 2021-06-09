@@ -2,8 +2,8 @@
 #define STATSD_CLIENT_HPP
 
 #include <cstdlib>
-#include <string>
 #include <memory>
+#include <string>
 #include "UDPSender.hpp"
 
 namespace Statsd {
@@ -39,7 +39,10 @@ public:
     //!@{
 
     //! Sets a configuration { host, port, prefix, batchsize }
-    void setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize = 0) noexcept;
+    void setConfig(const std::string& host,
+                   const uint16_t port,
+                   const std::string& prefix,
+                   const uint64_t batchsize = 0) noexcept;
 
     //! Returns the error message as an std::string
     const std::string& errorMessage() const noexcept;
@@ -60,8 +63,10 @@ public:
     void timing(const std::string& key, const unsigned int ms, const float frequency = 1.0f) const noexcept;
 
     //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string& key, const int value, const std::string& type, const float frequency = 1.0f) const
-        noexcept;
+    void send(const std::string& key,
+              const int value,
+              const std::string& type,
+              const float frequency = 1.0f) const noexcept;
 
     //!@}
 
@@ -82,7 +87,10 @@ inline StatsdClient::StatsdClient(const std::string& host,
     std::srand(time(nullptr));
 }
 
-inline void StatsdClient::setConfig(const std::string& host, const uint16_t port, const std::string& prefix, const uint64_t batchsize) noexcept {
+inline void StatsdClient::setConfig(const std::string& host,
+                                    const uint16_t port,
+                                    const std::string& prefix,
+                                    const uint64_t batchsize) noexcept {
     m_prefix = prefix;
     m_sender.reset(new UDPSender(host, port, batchsize));
 }
@@ -103,8 +111,9 @@ inline void StatsdClient::count(const std::string& key, const int delta, const f
     return send(key, delta, "c", frequency);
 }
 
-inline void StatsdClient::gauge(const std::string& key, const unsigned int value, const float frequency) const
-    noexcept {
+inline void StatsdClient::gauge(const std::string& key,
+                                const unsigned int value,
+                                const float frequency) const noexcept {
     return send(key, value, "g", frequency);
 }
 
