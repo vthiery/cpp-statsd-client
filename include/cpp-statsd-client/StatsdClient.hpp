@@ -1,10 +1,10 @@
 #ifndef STATSD_CLIENT_HPP
 #define STATSD_CLIENT_HPP
 
+#include <cpp-statsd-client/UDPSender.hpp>
 #include <cstdlib>
 #include <memory>
 #include <string>
-#include "UDPSender.hpp"
 
 namespace Statsd {
 /*!

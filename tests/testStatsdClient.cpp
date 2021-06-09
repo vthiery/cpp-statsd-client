@@ -1,5 +1,5 @@
-#include <StatsdClient.hpp>
 #include <cassert>
+#include <cpp-statsd-client/StatsdClient.hpp>
 #include <iostream>
 
 using namespace Statsd;
