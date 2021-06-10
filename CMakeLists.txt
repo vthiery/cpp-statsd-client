@@ -44,6 +44,7 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
 # The test targets
 find_package(Threads)
 add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
+target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 target_link_libraries(testStatsdClient ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME})
 
 # The test suite
