@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_EXTENSIONS OFF)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
+find_package(Threads)
 
 # The library target
 add_library(${PROJECT_NAME} INTERFACE)
@@ -17,6 +17,7 @@ target_include_directories(
   ${PROJECT_NAME}
   INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+target_link_libraries(${PROJECT_NAME} INTERFACE Threads::Threads)
 
 # The installation and pkg-config-like cmake config
 install(TARGETS ${PROJECT_NAME}
@@ -42,12 +43,12 @@ install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
 
 # The test targets
-find_package(Threads)
 add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
 target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
 target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-target_link_libraries(testStatsdClient ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME})
+target_link_libraries(testStatsdClient ${PROJECT_NAME})
 
 # The test suite
 enable_testing()
-add_test(testSuite testStatsdClient)
+add_test(ctestTestStatsdClient testStatsdClient)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS testStatsdClient)
