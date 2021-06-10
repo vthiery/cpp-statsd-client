@@ -20,8 +20,6 @@ namespace Statsd {
  * UDP sender
  *
  * A simple UDP sender handling batching.
- * Its configuration can be changed at runtime for
- * more flexibility.
  *
  */
 class UDPSender final {
@@ -45,6 +43,9 @@ public:
 
     //! Returns the error message as an string
     const std::string& errorMessage() const noexcept;
+
+    //! Returns true if the sender is initialized
+    bool initialized() const noexcept;
 
     //!@}
 
@@ -108,14 +109,19 @@ private:
 
     //! Error message (optional string)
     std::string m_errorMessage;
+
+    //! Bad file descriptor
+    static constexpr int k_invalidFd{-1};
 };
 
 inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize) noexcept
     : m_host(host), m_port(port) {
     // Initialize the socket
-    initialize();
+    if (!initialize()) {
+        return;
+    }
 
-    // If batching is on, use a dedicated thread to send every now and then
+    // If batching is on, use a dedicated thread to send after the wait time is reached
     if (batchsize != 0) {
         // Thread' sleep duration between batches
         // TODO: allow to input this
@@ -126,6 +132,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
 
         // Define the batching thread
         m_batchingThread = std::thread([this, batchingWait] {
+            // TODO: this will drop unsent stats, should we send all the unsent stats before we exit?
             while (!m_mustExit.load(std::memory_order_acq_rel)) {
                 std::deque<std::string> stagedMessageQueue;
 
@@ -147,15 +154,16 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
 }
 
 inline UDPSender::~UDPSender() {
+    if (!initialized()) {
+        return;
+    }
+
     if (m_batching) {
         m_mustExit.store(true, std::memory_order_acq_rel);
         m_batchingThread.join();
     }
 
-    if (m_socket >= 0) {
-        close(m_socket);
-        m_socket = -1;
-    }
+    close(m_socket);
 }
 
 inline void UDPSender::send(const std::string& message) noexcept {
@@ -180,7 +188,7 @@ inline const std::string& UDPSender::errorMessage() const noexcept {
 inline bool UDPSender::initialize() noexcept {
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (m_socket == -1) {
+    if (m_socket == k_invalidFd) {
         m_errorMessage = std::string("Could not create socket, err=") + std::strerror(errno);
         return false;
     }
@@ -204,7 +212,7 @@ inline bool UDPSender::initialize() noexcept {
         if (ret != 0) {
             // An error code has been returned by getaddrinfo
             close(m_socket);
-            m_socket = -1;
+            m_socket = k_invalidFd;
             m_errorMessage = "getaddrinfo failed: error=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
         }
@@ -228,6 +236,10 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
         m_errorMessage =
             "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
     }
+}
+
+inline bool UDPSender::initialized() const noexcept {
+    return m_socket != k_invalidFd;
 }
 
 }  // namespace Statsd
