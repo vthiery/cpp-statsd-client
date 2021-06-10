@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "StatsdServer.hpp"
 #include "cpp-statsd-client/StatsdClient.hpp"
 
 using namespace Statsd;
