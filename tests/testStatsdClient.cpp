@@ -1,6 +1,7 @@
-#include <StatsdClient.hpp>
-#include <StatsdServer.hpp>
 #include <iostream>
+
+#include "StatsdServer.hpp"
+#include "cpp-statsd-client/StatsdClient.hpp"
 
 using namespace Statsd;
 
@@ -136,7 +137,7 @@ void testSendRecv(uint64_t batchSize) {
     }
 }
 
-int main(int argc, char** argv) {
+int main() {
     // If any of these tests fail they throw an exception, not catching makes for a nonzero return code
 
     // general things that should be errors
