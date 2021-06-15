@@ -8,10 +8,6 @@
 #include <random>
 #include <string>
 
-#define STATSD_CLIENT_VERSION_MAJOR 2
-#define STATSD_CLIENT_VERSION_MINOR 0
-#define STATSD_CLIENT_VERSION_PATCH 0
-
 namespace Statsd {
 
 /*!
