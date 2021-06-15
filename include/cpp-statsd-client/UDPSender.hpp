@@ -41,8 +41,11 @@ public:
     //! Send a message
     void send(const std::string::const_iterator& begin, const std::string::const_iterator& end) noexcept;
 
-    //! Returns the error message as an string
+    //! Returns the error message as a string
     const std::string& errorMessage() const noexcept;
+
+    //! Set the error message
+    void setErrorMessage(const std::string& error) noexcept;
 
     //! Returns true if the sender is initialized
     bool initialized() const noexcept;
@@ -171,11 +174,16 @@ inline void UDPSender::send(const std::string::const_iterator& begin, const std:
     // If batching is on, accumulate messages in the queue
     if (m_batching) {
         std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
+        // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
         if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
-            m_batchingMessageQueue.emplace_back(std::string(begin, end));
-        } else {
-            m_batchingMessageQueue.back().append("\n").append(begin, end);
+            m_batchingMessageQueue.emplace_back();
+            m_batchingMessageQueue.back().reserve(m_batchsize + 256);
+        }  // When there is already a batch open we need a separator when its not empty
+        else if (!m_batchingMessageQueue.back().empty()) {
+            m_batchingMessageQueue.back().push_back('\n');
         }
+        // Add the new message to the batch
+        m_batchingMessageQueue.back().append(begin, end);
     } else {
         sendToDaemon(begin, end);
     }
@@ -185,11 +193,15 @@ inline const std::string& UDPSender::errorMessage() const noexcept {
     return m_errorMessage;
 }
 
+inline void UDPSender::setErrorMessage(const std::string& error) noexcept {
+    m_errorMessage = error;
+}
+
 inline bool UDPSender::initialize() noexcept {
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (m_socket == k_invalidFd) {
-        m_errorMessage = std::string("Could not create socket, err=") + std::strerror(errno);
+        m_errorMessage = std::string("socket creation failed: err=") + std::strerror(errno);
         return false;
     }
 
@@ -213,7 +225,7 @@ inline bool UDPSender::initialize() noexcept {
             // An error code has been returned by getaddrinfo
             close(m_socket);
             m_socket = k_invalidFd;
-            m_errorMessage = "getaddrinfo failed: error=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
+            m_errorMessage = "getaddrinfo failed: err=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
         }
 

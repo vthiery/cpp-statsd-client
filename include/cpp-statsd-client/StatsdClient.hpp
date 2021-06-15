@@ -152,14 +152,13 @@ inline void StatsdClient::send(const std::string& key,
         return;
     }
 
-    // Prepare the buffer and include the sampling rate if it's not 1.f
-    int string_len = -1;
+    // Sampling rate is 1.0f, no need to specify it
+    int string_len;
     if (isFrequencyOne) {
-        // Sampling rate is 1.0f, no need to specify it
         string_len = std::snprintf(
             &m_buffer.front(), m_buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
-    } else {
-        // Sampling rate is different from 1.0f, hence specify it
+    }  // Sampling rate is different from 1.0f, hence specify it
+    else {
         string_len = std::snprintf(&m_buffer.front(),
                                    m_buffer.size(),
                                    "%s%s:%d|%s|@%.2f",
@@ -168,6 +167,12 @@ inline void StatsdClient::send(const std::string& key,
                                    value,
                                    type.c_str(),
                                    frequency);
+    }
+
+    // Your stat was too large
+    if (static_cast<size_t>(string_len) > m_buffer.size()) {
+        m_sender->setErrorMessage("snprintf failed message too large");
+        return;
     }
 
     // Send the message via the UDP sender
