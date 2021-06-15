@@ -17,6 +17,12 @@ namespace Statsd {
  * This is the Statsd client, exposing the classic methods
  * and relying on a UDP sender for the actual sending.
  *
+ * The prefix for a stat is provided once at construction or
+ * on reconfiguring the client. The separator character '.'
+ * is automatically inserted between the prefix and the stats
+ * key, therefore you should neither append one to the prefix
+ * nor prepend one to the key
+ *
  * The sampling frequency can be input, as well as the
  * batching size. The latter is the optional limit in
  * number of bytes a batch of stats can be before it is
@@ -89,11 +95,21 @@ private:
     mutable std::string m_buffer;
 };
 
+namespace detail {
+std::string sanitizePrefix(std::string prefix) {
+    // For convenience we provide the dot when generating the stat message
+    if (!prefix.empty() && prefix.back() == '.') {
+        prefix.pop_back();
+    }
+    return prefix;
+}
+}  // namespace detail
+
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
                                   const uint64_t batchsize) noexcept
-    : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}), m_buffer(256, '\0') {
+    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize}), m_buffer(256, '\0') {
     // Initialize the random generator to be used for sampling
     seed();
 }
@@ -102,7 +118,7 @@ inline void StatsdClient::setConfig(const std::string& host,
                                     const uint16_t port,
                                     const std::string& prefix,
                                     const uint64_t batchsize) noexcept {
-    m_prefix = prefix;
+    m_prefix = detail::sanitizePrefix(prefix);
     m_sender.reset(new UDPSender(host, port, batchsize));
 }
 
@@ -153,16 +169,24 @@ inline void StatsdClient::send(const std::string& key,
     }
 
     // Sampling rate is 1.0f, no need to specify it
+    const bool needs_dot = !m_prefix.empty() && !key.empty();
     int string_len;
     if (isFrequencyOne) {
-        string_len = std::snprintf(
-            &m_buffer.front(), m_buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
+        string_len = std::snprintf(&m_buffer.front(),
+                                   m_buffer.size(),
+                                   "%s%s%s:%d|%s",
+                                   m_prefix.c_str(),
+                                   needs_dot ? "." : "",
+                                   key.c_str(),
+                                   value,
+                                   type.c_str());
     }  // Sampling rate is different from 1.0f, hence specify it
     else {
         string_len = std::snprintf(&m_buffer.front(),
                                    m_buffer.size(),
-                                   "%s%s:%d|%s|@%.2f",
+                                   "%s%s%s:%d|%s|@%.2f",
                                    m_prefix.c_str(),
+                                   needs_dot ? "." : "",
                                    key.c_str(),
                                    value,
                                    type.c_str(),
