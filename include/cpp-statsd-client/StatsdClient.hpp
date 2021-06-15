@@ -84,13 +84,16 @@ private:
 
     //! The random number generator for handling sampling
     mutable std::mt19937 m_randomEngine;
+
+    //! The buffer string format our stats before sending them
+    mutable std::string m_buffer;
 };
 
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
                                   const uint64_t batchsize) noexcept
-    : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}) {
+    : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}), m_buffer(256, '\0') {
     // Initialize the random generator to be used for sampling
     seed();
 }
@@ -150,16 +153,15 @@ inline void StatsdClient::send(const std::string& key,
     }
 
     // Prepare the buffer and include the sampling rate if it's not 1.f
-    std::string buffer(256, '\0');
     int string_len = -1;
     if (isFrequencyOne) {
         // Sampling rate is 1.0f, no need to specify it
         string_len = std::snprintf(
-            &buffer.front(), buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
+            &m_buffer.front(), m_buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
     } else {
         // Sampling rate is different from 1.0f, hence specify it
-        string_len = std::snprintf(&buffer.front(),
-                                   buffer.size(),
+        string_len = std::snprintf(&m_buffer.front(),
+                                   m_buffer.size(),
                                    "%s%s:%d|%s|@%.2f",
                                    m_prefix.c_str(),
                                    key.c_str(),
@@ -168,12 +170,8 @@ inline void StatsdClient::send(const std::string& key,
                                    frequency);
     }
 
-    // Trim the trailing null chars
-    // TODO: perf improvement: send the len along and keep the buffer around as a member variable
-    buffer.resize(std::min(string_len, static_cast<int>(buffer.size())));
-
     // Send the message via the UDP sender
-    m_sender->send(buffer);
+    m_sender->send(m_buffer.cbegin(), m_buffer.cbegin() + string_len);
 }
 
 inline void StatsdClient::seed(unsigned int seed) noexcept {
