@@ -57,9 +57,20 @@ void testReconfigure() {
         throw std::runtime_error("Incorrect stat received");
     }
 
-    client.setConfig("localhost", 8125, "second.");
+    client.setConfig("localhost", 8125, "second");
     client.send("bar", 1, "c", 1.f);
     if (server.receive() != "second.bar:1|c") {
+        throw std::runtime_error("Incorrect stat received");
+    }
+
+    client.setConfig("localhost", 8125, "");
+    client.send("third.baz", 1, "c", 1.f);
+    if (server.receive() != "third.baz:1|c") {
+        throw std::runtime_error("Incorrect stat received");
+    }
+
+    client.send("", 1, "c", 1.f);
+    if (server.receive() != ":1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
 
@@ -90,7 +101,7 @@ void testSendRecv(uint64_t batchSize) {
         throwOnError(client);
         expected.emplace_back("sendRecv.kiki:-1|c");
 
-        // Adjusts "toto" by +3
+        // Adjusts "toto" by +2
         client.seed(19);  // this seed gets a hit on the first call
         client.count("toto", 2, 0.1f);
         throwOnError(client);
@@ -112,9 +123,9 @@ void testSendRecv(uint64_t batchSize) {
         expected.emplace_back("sendRecv.myTiming:2|ms|@0.10");
 
         // Send a metric explicitly
-        client.send("tutu", 4, "c", 2.0f);
+        client.send("tutu", 241, "c", 2.0f);
         throwOnError(client);
-        expected.emplace_back("sendRecv.tutu:4|c");
+        expected.emplace_back("sendRecv.tutu:241|c");
     }
 
     // Signal the mock server we are done

@@ -45,7 +45,7 @@ using namespace Statsd;
 
 int main() {
     // Define the client on localhost, with port 8080, using a prefix and a batching size of 20 bytes
-    StatsdClient client{ "127.0.0.1", 8080, "myPrefix.", 20 };
+    StatsdClient client{ "127.0.0.1", 8080, "myPrefix", 20 };
 
     // Increment the metric "coco"
     client.increment("coco");
@@ -85,7 +85,7 @@ struct MyApp {
         m_client.count("bar", 3);
     }
 private:
-    StatsdClient m_client{"localhost", 8125, "foo."};
+    StatsdClient m_client{"localhost", 8125, "foo"};
 };
 
 int main() {
@@ -110,12 +110,12 @@ using namespace Statsd;
 int main()
 {
     // Define the client on localhost, with port 8080, using a prefix and a batching size of 20 bytes
-    StatsdClient client{ "127.0.0.1", 8080, "myPrefix.", 20 };
+    StatsdClient client{ "127.0.0.1", 8080, "myPrefix", 20 };
 
     client.increment("coco");
 
     // Set a new configuration, using a different port and a different prefix
-    client.setConfig("127.0.0.1", 8000, "anotherPrefix.");
+    client.setConfig("127.0.0.1", 8000, "anotherPrefix");
 
     client.decrement("kiki");
 }

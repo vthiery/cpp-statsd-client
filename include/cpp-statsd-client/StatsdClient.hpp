@@ -8,6 +8,10 @@
 #include <random>
 #include <string>
 
+#define STATSD_CLIENT_VERSION_MAJOR 2
+#define STATSD_CLIENT_VERSION_MINOR 0
+#define STATSD_CLIENT_VERSION_PATCH 0
+
 namespace Statsd {
 
 /*!
@@ -16,6 +20,12 @@ namespace Statsd {
  *
  * This is the Statsd client, exposing the classic methods
  * and relying on a UDP sender for the actual sending.
+ *
+ * The prefix for a stat is provided once at construction or
+ * on reconfiguring the client. The separator character '.'
+ * is automatically inserted between the prefix and the stats
+ * key, therefore you should neither append one to the prefix
+ * nor prepend one to the key
  *
  * The sampling frequency can be input, as well as the
  * batching size. The latter is the optional limit in
@@ -86,11 +96,21 @@ private:
     mutable std::mt19937 m_randomEngine;
 };
 
+namespace detail {
+std::string sanitizePrefix(std::string prefix) {
+    // For convenience we provide the dot when generating the stat message
+    if (!prefix.empty() && prefix.back() == '.') {
+        prefix.pop_back();
+    }
+    return prefix;
+}
+}  // namespace detail
+
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
                                   const uint64_t batchsize) noexcept
-    : m_prefix(prefix), m_sender(new UDPSender{host, port, batchsize}) {
+    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize}) {
     // Initialize the random generator to be used for sampling
     seed();
 }
@@ -99,7 +119,7 @@ inline void StatsdClient::setConfig(const std::string& host,
                                     const uint16_t port,
                                     const std::string& prefix,
                                     const uint64_t batchsize) noexcept {
-    m_prefix = prefix;
+    m_prefix = detail::sanitizePrefix(prefix);
     m_sender.reset(new UDPSender(host, port, batchsize));
 }
 
@@ -150,18 +170,26 @@ inline void StatsdClient::send(const std::string& key,
     }
 
     // Prepare the buffer and include the sampling rate if it's not 1.f
+    const bool needs_dot = !m_prefix.empty() && !key.empty();
     std::string buffer(256, '\0');
     int string_len = -1;
     if (isFrequencyOne) {
         // Sampling rate is 1.0f, no need to specify it
-        string_len = std::snprintf(
-            &buffer.front(), buffer.size(), "%s%s:%d|%s", m_prefix.c_str(), key.c_str(), value, type.c_str());
+        string_len = std::snprintf(&buffer.front(),
+                                   buffer.size(),
+                                   "%s%s%s:%d|%s",
+                                   m_prefix.c_str(),
+                                   needs_dot ? "." : "",
+                                   key.c_str(),
+                                   value,
+                                   type.c_str());
     } else {
         // Sampling rate is different from 1.0f, hence specify it
         string_len = std::snprintf(&buffer.front(),
                                    buffer.size(),
-                                   "%s%s:%d|%s|@%.2f",
+                                   "%s%s%s:%d|%s|@%.2f",
                                    m_prefix.c_str(),
+                                   needs_dot ? "." : "",
                                    key.c_str(),
                                    value,
                                    type.c_str(),
