@@ -73,11 +73,24 @@ public:
     //! Records a timing for a key, at a given frequency
     void timing(const std::string& key, const unsigned int ms, float frequency = 1.0f) const noexcept;
 
-    //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string& key, const int value, const std::string& type, float frequency = 1.0f) const noexcept;
+    //! Records an arbitrary unit for a key, at a given frequency. An alias for timing
+    //! suited to use cases whose units do not involve time
+    void histogram(const std::string& key, const unsigned int value, float frequency = 1.0f) const noexcept;
+
+    //! Records a count of unique occurrences for a key, at a given frequency
+    void set(const std::string& key, const unsigned int sum, float frequency = 1.0f) const noexcept;
 
     //! Seed the RNG that controls sampling
     void seed(unsigned int seed = std::random_device()()) noexcept;
+
+    //!@}
+
+private:
+    // @name Private methods
+    // @{
+
+    //! Send a value for a key, according to its type, at a given frequency
+    void send(const std::string& key, const int value, const char* type, float frequency = 1.0f) const noexcept;
 
     //!@}
 
@@ -100,6 +113,13 @@ std::string sanitizePrefix(std::string prefix) {
     }
     return prefix;
 }
+
+// All supported metric types
+constexpr char METRIC_TYPE_COUNT[] = "c";
+constexpr char METRIC_TYPE_GUAGE[] = "g";
+constexpr char METRIC_TYPE_TIMING[] = "ms";
+constexpr char METRIC_TYPE_HISTOGRAM[] = "h";
+constexpr char METRIC_TYPE_SET[] = "s";
 }  // namespace detail
 
 inline StatsdClient::StatsdClient(const std::string& host,
@@ -132,22 +152,30 @@ inline void StatsdClient::increment(const std::string& key, float frequency) con
 }
 
 inline void StatsdClient::count(const std::string& key, const int delta, float frequency) const noexcept {
-    return send(key, delta, "c", frequency);
+    return send(key, delta, detail::METRIC_TYPE_COUNT, frequency);
 }
 
 inline void StatsdClient::gauge(const std::string& key,
                                 const unsigned int value,
                                 const float frequency) const noexcept {
-    return send(key, value, "g", frequency);
+    return send(key, value, detail::METRIC_TYPE_GUAGE, frequency);
 }
 
 inline void StatsdClient::timing(const std::string& key, const unsigned int ms, float frequency) const noexcept {
-    return send(key, ms, "ms", frequency);
+    return send(key, ms, detail::METRIC_TYPE_TIMING, frequency);
+}
+
+inline void StatsdClient::histogram(const std::string& key, const unsigned int value, float frequency) const noexcept {
+    return send(key, value, detail::METRIC_TYPE_HISTOGRAM, frequency);
+}
+
+inline void StatsdClient::set(const std::string& key, const unsigned int sum, float frequency) const noexcept {
+    return send(key, sum, detail::METRIC_TYPE_SET, frequency);
 }
 
 inline void StatsdClient::send(const std::string& key,
                                const int value,
-                               const std::string& type,
+                               const char* type,
                                float frequency) const noexcept {
     // Bail if we can't send anything anyway
     if (!m_sender->initialized()) {
@@ -178,7 +206,7 @@ inline void StatsdClient::send(const std::string& key,
                                    needs_dot ? "." : "",
                                    key.c_str(),
                                    value,
-                                   type.c_str());
+                                   type);
     } else {
         // Sampling rate is different from 1.0f, hence specify it
         string_len = std::snprintf(&buffer.front(),
@@ -188,7 +216,7 @@ inline void StatsdClient::send(const std::string& key,
                                    needs_dot ? "." : "",
                                    key.c_str(),
                                    value,
-                                   type.c_str(),
+                                   type,
                                    frequency);
     }
 
