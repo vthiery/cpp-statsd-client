@@ -124,9 +124,19 @@ void testSendRecv(uint64_t batchSize) {
         expected.emplace_back("sendRecv.tutu:1227|s");
 
         // Send a histogram of 13 values per time bin
-        client.histogram("rösti", 13);
+        client.histogram("dr.rösti", 13);
         throwOnError(client);
-        expected.emplace_back("sendRecv.rösti:13|h");
+        expected.emplace_back("sendRecv.dr.rösti:13|h");
+
+        // Gauge but with tags
+        client.gauge("grabe", 333, 1.f, {"liegt", "im", "weste"});
+        throwOnError(client);
+        expected.emplace_back("sendRecv.grabe:333|g|#liegt,im,weste");
+
+        // All the things
+        client.count("foo", -42, .9f, {"bar", "baz"});
+        throwOnError(client);
+        expected.emplace_back("sendRecv.foo:-42|c|@0.90|#bar,baz");
     }
 
     // Signal the mock server we are done

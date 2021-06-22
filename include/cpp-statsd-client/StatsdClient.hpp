@@ -7,6 +7,7 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <vector>
 
 namespace Statsd {
 
@@ -59,26 +60,45 @@ public:
     const std::string& errorMessage() const noexcept;
 
     //! Increments the key, at a given frequency rate
-    void increment(const std::string& key, float frequency = 1.0f) const noexcept;
+    void increment(const std::string& key,
+                   float frequency = 1.0f,
+                   const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Increments the key, at a given frequency rate
-    void decrement(const std::string& key, float frequency = 1.0f) const noexcept;
+    void decrement(const std::string& key,
+                   float frequency = 1.0f,
+                   const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Adjusts the specified key by a given delta, at a given frequency rate
-    void count(const std::string& key, const int delta, float frequency = 1.0f) const noexcept;
+    void count(const std::string& key,
+               const int delta,
+               float frequency = 1.0f,
+               const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Records a gauge for the key, with a given value, at a given frequency rate
-    void gauge(const std::string& key, const unsigned int value, float frequency = 1.0f) const noexcept;
+    void gauge(const std::string& key,
+               const unsigned int value,
+               float frequency = 1.0f,
+               const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Records a timing for a key, at a given frequency
-    void timing(const std::string& key, const unsigned int ms, float frequency = 1.0f) const noexcept;
+    void timing(const std::string& key,
+                const unsigned int ms,
+                float frequency = 1.0f,
+                const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Records an arbitrary unit for a key, at a given frequency. An alias for timing
     //! suited to use cases whose units do not involve time
-    void histogram(const std::string& key, const unsigned int value, float frequency = 1.0f) const noexcept;
+    void histogram(const std::string& key,
+                   const unsigned int value,
+                   float frequency = 1.0f,
+                   const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Records a count of unique occurrences for a key, at a given frequency
-    void set(const std::string& key, const unsigned int sum, float frequency = 1.0f) const noexcept;
+    void set(const std::string& key,
+             const unsigned int sum,
+             float frequency = 1.0f,
+             const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Seed the RNG that controls sampling
     void seed(unsigned int seed = std::random_device()()) noexcept;
@@ -90,7 +110,11 @@ private:
     // @{
 
     //! Send a value for a key, according to its type, at a given frequency
-    void send(const std::string& key, const int value, const char* type, float frequency = 1.0f) const noexcept;
+    void send(const std::string& key,
+              const int value,
+              const char* type,
+              float frequency,
+              const std::vector<std::string>& tags) const noexcept;
 
     //!@}
 
@@ -148,40 +172,58 @@ inline const std::string& StatsdClient::errorMessage() const noexcept {
     return m_sender->errorMessage();
 }
 
-inline void StatsdClient::decrement(const std::string& key, float frequency) const noexcept {
-    return count(key, -1, frequency);
+inline void StatsdClient::decrement(const std::string& key,
+                                    float frequency,
+                                    const std::vector<std::string>& tags) const noexcept {
+    return count(key, -1, frequency, tags);
 }
 
-inline void StatsdClient::increment(const std::string& key, float frequency) const noexcept {
-    return count(key, 1, frequency);
+inline void StatsdClient::increment(const std::string& key,
+                                    float frequency,
+                                    const std::vector<std::string>& tags) const noexcept {
+    return count(key, 1, frequency, tags);
 }
 
-inline void StatsdClient::count(const std::string& key, const int delta, float frequency) const noexcept {
-    return send(key, delta, detail::METRIC_TYPE_COUNT, frequency);
+inline void StatsdClient::count(const std::string& key,
+                                const int delta,
+                                float frequency,
+                                const std::vector<std::string>& tags) const noexcept {
+    return send(key, delta, detail::METRIC_TYPE_COUNT, frequency, tags);
 }
 
 inline void StatsdClient::gauge(const std::string& key,
                                 const unsigned int value,
-                                const float frequency) const noexcept {
-    return send(key, value, detail::METRIC_TYPE_GUAGE, frequency);
+                                const float frequency,
+                                const std::vector<std::string>& tags) const noexcept {
+    return send(key, value, detail::METRIC_TYPE_GUAGE, frequency, tags);
 }
 
-inline void StatsdClient::timing(const std::string& key, const unsigned int ms, float frequency) const noexcept {
-    return send(key, ms, detail::METRIC_TYPE_TIMING, frequency);
+inline void StatsdClient::timing(const std::string& key,
+                                 const unsigned int ms,
+                                 float frequency,
+                                 const std::vector<std::string>& tags) const noexcept {
+    return send(key, ms, detail::METRIC_TYPE_TIMING, frequency, tags);
 }
 
-inline void StatsdClient::histogram(const std::string& key, const unsigned int value, float frequency) const noexcept {
-    return send(key, value, detail::METRIC_TYPE_HISTOGRAM, frequency);
+inline void StatsdClient::histogram(const std::string& key,
+                                    const unsigned int value,
+                                    float frequency,
+                                    const std::vector<std::string>& tags) const noexcept {
+    return send(key, value, detail::METRIC_TYPE_HISTOGRAM, frequency, tags);
 }
 
-inline void StatsdClient::set(const std::string& key, const unsigned int sum, float frequency) const noexcept {
-    return send(key, sum, detail::METRIC_TYPE_SET, frequency);
+inline void StatsdClient::set(const std::string& key,
+                              const unsigned int sum,
+                              float frequency,
+                              const std::vector<std::string>& tags) const noexcept {
+    return send(key, sum, detail::METRIC_TYPE_SET, frequency, tags);
 }
 
 inline void StatsdClient::send(const std::string& key,
                                const int value,
                                const char* type,
-                               float frequency) const noexcept {
+                               float frequency,
+                               const std::vector<std::string>& tags) const noexcept {
     // Bail if we can't send anything anyway
     if (!m_sender->initialized()) {
         return;
@@ -215,6 +257,15 @@ inline void StatsdClient::send(const std::string& key,
     if (frequency < 1.f) {
         m_buffer.append("|@0.");
         m_buffer.append(std::to_string(static_cast<int>(frequency * 100)));
+    }
+
+    if (!tags.empty()) {
+        m_buffer.append("|#");
+        for (const auto& tag : tags) {
+            m_buffer.append(tag);
+            m_buffer.push_back(',');
+        }
+        m_buffer.pop_back();
     }
 
     // Send the message via the UDP sender
