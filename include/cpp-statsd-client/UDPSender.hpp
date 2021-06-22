@@ -39,13 +39,10 @@ public:
     //!@{
 
     //! Send a message
-    void send(const std::string::const_iterator& begin, const std::string::const_iterator& end) noexcept;
+    void send(const std::string& message) noexcept;
 
     //! Returns the error message as a string
     const std::string& errorMessage() const noexcept;
-
-    //! Set the error message
-    void setErrorMessage(const std::string& error) noexcept;
 
     //! Returns true if the sender is initialized
     bool initialized() const noexcept;
@@ -60,7 +57,7 @@ private:
     bool initialize() noexcept;
 
     //! Send a message to the daemon
-    void sendToDaemon(const std::string::const_iterator& begin, const std::string::const_iterator& end) noexcept;
+    void sendToDaemon(const std::string& message) noexcept;
 
     //!@}
 
@@ -145,7 +142,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
 
                 // Flush the queue
                 while (!stagedMessageQueue.empty()) {
-                    sendToDaemon(stagedMessageQueue.front().cbegin(), stagedMessageQueue.front().cend());
+                    sendToDaemon(stagedMessageQueue.front());
                     stagedMessageQueue.pop_front();
                 }
 
@@ -169,7 +166,7 @@ inline UDPSender::~UDPSender() {
     close(m_socket);
 }
 
-inline void UDPSender::send(const std::string::const_iterator& begin, const std::string::const_iterator& end) noexcept {
+inline void UDPSender::send(const std::string& message) noexcept {
     m_errorMessage.clear();
     // If batching is on, accumulate messages in the queue
     if (m_batching) {
@@ -183,18 +180,14 @@ inline void UDPSender::send(const std::string::const_iterator& begin, const std:
             m_batchingMessageQueue.back().push_back('\n');
         }
         // Add the new message to the batch
-        m_batchingMessageQueue.back().append(begin, end);
+        m_batchingMessageQueue.back().append(message);
     } else {
-        sendToDaemon(begin, end);
+        sendToDaemon(message);
     }
 }
 
 inline const std::string& UDPSender::errorMessage() const noexcept {
     return m_errorMessage;
-}
-
-inline void UDPSender::setErrorMessage(const std::string& error) noexcept {
-    m_errorMessage = error;
 }
 
 inline bool UDPSender::initialize() noexcept {
@@ -240,10 +233,10 @@ inline bool UDPSender::initialize() noexcept {
     return true;
 }
 
-inline void UDPSender::sendToDaemon(const std::string::const_iterator& begin,
-                                    const std::string::const_iterator& end) noexcept {
+inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
     // Try sending the message
-    const long int ret{sendto(m_socket, &*begin, end - begin, 0, (struct sockaddr*)&m_server, sizeof(m_server))};
+    const long int ret{
+        sendto(m_socket, &message.front(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
     if (ret == -1) {
         m_errorMessage =
             "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);

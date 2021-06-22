@@ -109,9 +109,11 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
                                   const uint64_t batchsize) noexcept
-    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize}), m_buffer(256, '\0') {
+    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize}) {
     // Initialize the random generator to be used for sampling
     seed();
+    // Avoid re-allocations by reserving a generous buffer
+    m_buffer.reserve(256);
 }
 
 inline void StatsdClient::setConfig(const std::string& host,
@@ -168,39 +170,22 @@ inline void StatsdClient::send(const std::string& key,
         return;
     }
 
-    // Sampling rate is 1.0f, no need to specify it
-    const bool needs_dot = !m_prefix.empty() && !key.empty();
-    int string_len;
-    if (isFrequencyOne) {
-        string_len = std::snprintf(&m_buffer.front(),
-                                   m_buffer.size(),
-                                   "%s%s%s:%d|%s",
-                                   m_prefix.c_str(),
-                                   needs_dot ? "." : "",
-                                   key.c_str(),
-                                   value,
-                                   type.c_str());
-    }  // Sampling rate is different from 1.0f, hence specify it
-    else {
-        string_len = std::snprintf(&m_buffer.front(),
-                                   m_buffer.size(),
-                                   "%s%s%s:%d|%s|@%.2f",
-                                   m_prefix.c_str(),
-                                   needs_dot ? "." : "",
-                                   key.c_str(),
-                                   value,
-                                   type.c_str(),
-                                   frequency);
-    }
-
-    // Your stat was too large
-    if (static_cast<size_t>(string_len) > m_buffer.size()) {
-        m_sender->setErrorMessage("snprintf failed message too large");
-        return;
+    // Format the stat message
+    m_buffer.clear();
+    m_buffer.append(m_prefix);
+    if (!m_prefix.empty() && !key.empty()) m_buffer.push_back('.');
+    m_buffer.append(key);
+    m_buffer.push_back(':');
+    m_buffer.append(std::to_string(value));
+    m_buffer.push_back('|');
+    m_buffer.append(type);
+    if (frequency < 1.f) {
+        m_buffer.append("|@0.");
+        m_buffer.append(std::to_string(static_cast<int>(frequency * 100)));
     }
 
     // Send the message via the UDP sender
-    m_sender->send(m_buffer.cbegin(), m_buffer.cbegin() + string_len);
+    m_sender->send(m_buffer);
 }
 
 inline void StatsdClient::seed(unsigned int seed) noexcept {

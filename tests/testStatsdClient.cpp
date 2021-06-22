@@ -42,13 +42,6 @@ void testErrorConditions() {
     // Resolve a rubbish ip and make sure initialization failed
     StatsdClient client{"256.256.256.256", 8125, "myPrefix", 20};
     throwOnError(client, false, "Should not be able to resolve a ridiculous ip");
-
-    // Sending a message that is too large should fail
-    client.setConfig("localhost", 8125, "foo");
-    std::string long_key(333, 'X');
-    throwOnError(client);
-    client.send(long_key, 42, "ms");
-    throwOnError(client, false, "Should not be able to send stats this long");
 }
 
 void testReconfigure() {
