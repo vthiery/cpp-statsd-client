@@ -87,13 +87,6 @@ public:
                 float frequency = 1.0f,
                 const std::vector<std::string>& tags = {}) const noexcept;
 
-    //! Records an arbitrary unit for a key, at a given frequency. An alias for timing
-    //! suited to use cases whose units do not involve time
-    void histogram(const std::string& key,
-                   const unsigned int value,
-                   float frequency = 1.0f,
-                   const std::vector<std::string>& tags = {}) const noexcept;
-
     //! Records a count of unique occurrences for a key, at a given frequency
     void set(const std::string& key,
              const unsigned int sum,
@@ -145,7 +138,6 @@ std::string sanitizePrefix(std::string prefix) {
 constexpr char METRIC_TYPE_COUNT[] = "c";
 constexpr char METRIC_TYPE_GUAGE[] = "g";
 constexpr char METRIC_TYPE_TIMING[] = "ms";
-constexpr char METRIC_TYPE_HISTOGRAM[] = "h";
 constexpr char METRIC_TYPE_SET[] = "s";
 }  // namespace detail
 
@@ -203,13 +195,6 @@ inline void StatsdClient::timing(const std::string& key,
                                  float frequency,
                                  const std::vector<std::string>& tags) const noexcept {
     return send(key, ms, detail::METRIC_TYPE_TIMING, frequency, tags);
-}
-
-inline void StatsdClient::histogram(const std::string& key,
-                                    const unsigned int value,
-                                    float frequency,
-                                    const std::vector<std::string>& tags) const noexcept {
-    return send(key, value, detail::METRIC_TYPE_HISTOGRAM, frequency, tags);
 }
 
 inline void StatsdClient::set(const std::string& key,

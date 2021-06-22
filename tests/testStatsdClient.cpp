@@ -123,11 +123,6 @@ void testSendRecv(uint64_t batchSize) {
         throwOnError(client);
         expected.emplace_back("sendRecv.tutu:1227|s");
 
-        // Send a histogram of 13 values per time bin
-        client.histogram("dr.rösti", 13);
-        throwOnError(client);
-        expected.emplace_back("sendRecv.dr.rösti:13|h");
-
         // Gauge but with tags
         client.gauge("grabe", 333, 1.f, {"liegt", "im", "weste"});
         throwOnError(client);
