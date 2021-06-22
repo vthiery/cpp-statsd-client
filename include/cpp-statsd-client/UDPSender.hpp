@@ -56,6 +56,9 @@ private:
     //! Initialize the sender and returns true when it is initialized
     bool initialize() noexcept;
 
+    //! Queue a message to be sent to the daemon later
+    inline void queueMessage(const std::string& message) noexcept;
+
     //! Send a message to the daemon
     void sendToDaemon(const std::string& message) noexcept;
 
@@ -170,20 +173,25 @@ inline void UDPSender::send(const std::string& message) noexcept {
     m_errorMessage.clear();
     // If batching is on, accumulate messages in the queue
     if (m_batching) {
-        std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
-        // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
-        if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
-            m_batchingMessageQueue.emplace_back();
-            m_batchingMessageQueue.back().reserve(m_batchsize + 256);
-        }  // When there is already a batch open we need a separator when its not empty
-        else if (!m_batchingMessageQueue.back().empty()) {
-            m_batchingMessageQueue.back().push_back('\n');
-        }
-        // Add the new message to the batch
-        m_batchingMessageQueue.back().append(message);
-    } else {
-        sendToDaemon(message);
+        queueMessage(message);
+        return;
     }
+
+    sendToDaemon(message);
+}
+
+inline void UDPSender::queueMessage(const std::string& message) noexcept {
+    std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
+    // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
+    if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
+        m_batchingMessageQueue.emplace_back();
+        m_batchingMessageQueue.back().reserve(m_batchsize + 256);
+    }  // When there is already a batch open we need a separator when its not empty
+    else if (!m_batchingMessageQueue.back().empty()) {
+        m_batchingMessageQueue.back().push_back('\n');
+    }
+    // Add the new message to the batch
+    m_batchingMessageQueue.back().append(message);
 }
 
 inline const std::string& UDPSender::errorMessage() const noexcept {
