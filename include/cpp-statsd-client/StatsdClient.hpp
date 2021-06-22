@@ -103,6 +103,9 @@ private:
 
     //! The random number generator for handling sampling
     mutable std::mt19937 m_randomEngine;
+
+    //! The buffer string format our stats before sending them
+    mutable std::string m_buffer;
 };
 
 namespace detail {
@@ -129,6 +132,8 @@ inline StatsdClient::StatsdClient(const std::string& host,
     : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize}) {
     // Initialize the random generator to be used for sampling
     seed();
+    // Avoid re-allocations by reserving a generous buffer
+    m_buffer.reserve(256);
 }
 
 inline void StatsdClient::setConfig(const std::string& host,
@@ -193,39 +198,27 @@ inline void StatsdClient::send(const std::string& key,
         return;
     }
 
-    // Prepare the buffer and include the sampling rate if it's not 1.f
-    const bool needs_dot = !m_prefix.empty() && !key.empty();
-    std::string buffer(256, '\0');
-    int string_len = -1;
-    if (isFrequencyOne) {
-        // Sampling rate is 1.0f, no need to specify it
-        string_len = std::snprintf(&buffer.front(),
-                                   buffer.size(),
-                                   "%s%s%s:%d|%s",
-                                   m_prefix.c_str(),
-                                   needs_dot ? "." : "",
-                                   key.c_str(),
-                                   value,
-                                   type);
-    } else {
-        // Sampling rate is different from 1.0f, hence specify it
-        string_len = std::snprintf(&buffer.front(),
-                                   buffer.size(),
-                                   "%s%s%s:%d|%s|@%.2f",
-                                   m_prefix.c_str(),
-                                   needs_dot ? "." : "",
-                                   key.c_str(),
-                                   value,
-                                   type,
-                                   frequency);
+    // Format the stat message
+    m_buffer.clear();
+
+    m_buffer.append(m_prefix);
+    if (!m_prefix.empty() && !key.empty()) {
+        m_buffer.push_back('.');
     }
 
-    // Trim the trailing null chars
-    // TODO: perf improvement: send the len along and keep the buffer around as a member variable
-    buffer.resize(std::min(string_len, static_cast<int>(buffer.size())));
+    m_buffer.append(key);
+    m_buffer.push_back(':');
+    m_buffer.append(std::to_string(value));
+    m_buffer.push_back('|');
+    m_buffer.append(type);
+
+    if (frequency < 1.f) {
+        m_buffer.append("|@0.");
+        m_buffer.append(std::to_string(static_cast<int>(frequency * 100)));
+    }
 
     // Send the message via the UDP sender
-    m_sender->send(buffer);
+    m_sender->send(m_buffer);
 }
 
 inline void StatsdClient::seed(unsigned int seed) noexcept {

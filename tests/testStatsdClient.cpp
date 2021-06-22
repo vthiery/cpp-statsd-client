@@ -31,21 +31,17 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
     } while (server.errorMessage().empty() && !messages.back().empty());
 }
 
-// TODO: would it be ok if we change the API of the client to throw on error instead of having to check a string?
-void throwOnError(const StatsdClient& client) {
-    if (!client.errorMessage().empty()) {
-        std::cerr << client.errorMessage() << std::endl;
-        throw std::runtime_error(client.errorMessage());
+void throwOnError(const StatsdClient& client, bool expectEmpty = true, const std::string& extraMessage = "") {
+    if (client.errorMessage().empty() != expectEmpty) {
+        std::cerr << (expectEmpty ? client.errorMessage() : extraMessage) << std::endl;
+        throw std::runtime_error(expectEmpty ? client.errorMessage() : extraMessage);
     }
 }
 
 void testErrorConditions() {
-    // Connect to a rubbish ip and make sure initialization failed
-    StatsdClient client{"256.256.256.256", 8125, "myPrefix.", 20};
-    if (client.errorMessage().empty()) {
-        std::cerr << "Should not be able to connect to ridiculous ip" << std::endl;
-        throw std::runtime_error("Should not be able to connect to ridiculous ip");
-    }
+    // Resolve a rubbish ip and make sure initialization failed
+    StatsdClient client{"256.256.256.256", 8125, "myPrefix", 20};
+    throwOnError(client, false, "Should not be able to resolve a ridiculous ip");
 }
 
 void testReconfigure() {
