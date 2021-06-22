@@ -172,13 +172,18 @@ inline void StatsdClient::send(const std::string& key,
 
     // Format the stat message
     m_buffer.clear();
+    
     m_buffer.append(m_prefix);
-    if (!m_prefix.empty() && !key.empty()) m_buffer.push_back('.');
+    if (!m_prefix.empty() && !key.empty()) {
+        m_buffer.push_back('.');
+    }
+    
     m_buffer.append(key);
     m_buffer.push_back(':');
     m_buffer.append(std::to_string(value));
     m_buffer.push_back('|');
     m_buffer.append(type);
+    
     if (frequency < 1.f) {
         m_buffer.append("|@0.");
         m_buffer.append(std::to_string(static_cast<int>(frequency * 100)));
