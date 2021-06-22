@@ -236,7 +236,7 @@ inline bool UDPSender::initialize() noexcept {
 inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
     // Try sending the message
     const long int ret{
-        sendto(m_socket, &message.front(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
+        sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
     if (ret == -1) {
         m_errorMessage =
             "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
