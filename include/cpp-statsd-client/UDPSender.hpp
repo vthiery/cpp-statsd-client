@@ -28,7 +28,10 @@ public:
     //!@{
 
     //! Constructor
-    UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize, const uint64_t sendInterval) noexcept;
+    UDPSender(const std::string& host,
+              const uint16_t port,
+              const uint64_t batchsize,
+              const uint64_t sendInterval) noexcept;
 
     //! Destructor
     ~UDPSender();
@@ -120,7 +123,10 @@ private:
     static constexpr int k_invalidFd{-1};
 };
 
-inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize, const uint64_t sendInterval) noexcept
+inline UDPSender::UDPSender(const std::string& host,
+                            const uint16_t port,
+                            const uint64_t batchsize,
+                            const uint64_t sendInterval) noexcept
     : m_host(host), m_port(port), m_batchsize(batchsize), m_sendInterval(sendInterval) {
     // Initialize the socket
     if (!initialize()) {
@@ -182,7 +188,8 @@ inline void UDPSender::send(const std::string& message) noexcept {
 
 inline void UDPSender::queueMessage(const std::string& message) noexcept {
     // We aquire a lock but only if we actually need to (ie there is a thread also accessing the queue)
-    auto batchingLock = m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
+    auto batchingLock =
+        m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
     // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
     if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
         m_batchingMessageQueue.emplace_back();
@@ -258,7 +265,8 @@ inline bool UDPSender::initialized() const noexcept {
 
 inline void UDPSender::flush() noexcept {
     // We aquire a lock but only if we actually need to (ie there is a thread also accessing the queue)
-    auto batchingLock = m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
+    auto batchingLock =
+        m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
     // Flush the queue
     while (!m_batchingMessageQueue.empty()) {
         sendToDaemon(m_batchingMessageQueue.front());
