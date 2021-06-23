@@ -124,9 +124,9 @@ void testSendRecv(uint64_t batchSize) {
         expected.emplace_back("sendRecv.tutu:1227|s");
 
         // Gauge but with tags
-        client.gauge("dr.rösti.grabe", 333, 1.f, {"liegt", "im", "weste"});
+        client.gauge("dr.röstigrabe", 333, 1.f, {"liegt", "im", "weste"});
         throwOnError(client);
-        expected.emplace_back("sendRecv.dr.rösti.grabe:333|g|#liegt,im,weste");
+        expected.emplace_back("sendRecv.dr.röstigrabe:333|g|#liegt,im,weste");
 
         // All the things
         client.count("foo", -42, .9f, {"bar", "baz"});
