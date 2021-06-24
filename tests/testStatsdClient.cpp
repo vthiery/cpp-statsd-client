@@ -48,24 +48,24 @@ void testReconfigure() {
     StatsdServer server;
 
     StatsdClient client("localhost", 8125, "first.");
-    client.send("foo", 1, "c", 1.f);
+    client.increment("foo");
     if (server.receive() != "first.foo:1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
 
     client.setConfig("localhost", 8125, "second");
-    client.send("bar", 1, "c", 1.f);
+    client.increment("bar");
     if (server.receive() != "second.bar:1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
 
     client.setConfig("localhost", 8125, "");
-    client.send("third.baz", 1, "c", 1.f);
+    client.increment("third.baz");
     if (server.receive() != "third.baz:1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
 
-    client.send("", 1, "c", 1.f);
+    client.increment("");
     if (server.receive() != ":1|c") {
         throw std::runtime_error("Incorrect stat received");
     }
@@ -118,14 +118,24 @@ void testSendRecv(uint64_t batchSize) {
         throwOnError(client);
         expected.emplace_back("sendRecv.myTiming:2|ms|@0.10");
 
-        // Send a metric explicitly
-        client.send("tutu", 241, "c", 2.0f);
+        // Send a set with 1227 total uniques
+        client.set("tutu", 1227, 2.0f);
         throwOnError(client);
-        expected.emplace_back("sendRecv.tutu:241|c");
+        expected.emplace_back("sendRecv.tutu:1227|s");
+
+        // Gauge but with tags
+        client.gauge("dr.rösti.grabe", 333, 1.f, {"liegt", "im", "weste"});
+        throwOnError(client);
+        expected.emplace_back("sendRecv.dr.rösti.grabe:333|g|#liegt,im,weste");
+
+        // All the things
+        client.count("foo", -42, .9f, {"bar", "baz"});
+        throwOnError(client);
+        expected.emplace_back("sendRecv.foo:-42|c|@0.90|#bar,baz");
     }
 
     // Signal the mock server we are done
-    client.send("DONE", 0, "ms");
+    client.timing("DONE", 0);
 
     // Wait for the server to stop
     server.join();
