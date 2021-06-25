@@ -7,11 +7,12 @@
 #include <io.h>
 #else
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <netdb.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <atomic>
 #endif
+#include <sys/types.h>
 #include <cmath>
 #include <cstring>
 #include <deque>
