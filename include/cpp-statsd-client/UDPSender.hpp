@@ -171,7 +171,11 @@ inline UDPSender::~UDPSender() {
         m_batchingThread.join();
     }
 
+#if _WIN32
+    closesocket(m_socket);
+#else
     close(m_socket);
+#endif
 }
 
 inline void UDPSender::send(const std::string& message) noexcept {
@@ -229,7 +233,11 @@ inline bool UDPSender::initialize() noexcept {
         const int ret{getaddrinfo(m_host.c_str(), nullptr, &hints, &results)};
         if (ret != 0) {
             // An error code has been returned by getaddrinfo
+#if _WIN32
+            closesocket(m_socket);
+#else
             close(m_socket);
+#endif
             m_socket = k_invalidFd;
             m_errorMessage = "getaddrinfo failed: err=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
