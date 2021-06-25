@@ -15,7 +15,7 @@ jobs:
         shell: bash
         run: |
           export LD_LIBRARY_PATH=.:$(cat /etc/ld.so.conf.d/* | grep -vF "#" | tr "\\n" ":" | sed -e "s/:$//g")
-          cmake . -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE
+          cmake . -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=On
           make all -j$(nproc)
       - name: coverage
         shell: bash
