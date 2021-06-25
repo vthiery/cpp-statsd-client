@@ -6,7 +6,7 @@ project(cpp-statsd-client
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
 
-option(BUILD_TESTS "Build tests" OFF)
+option(BUILD_TESTS "Build tests" ON)
 option(HUNTER_ENABLED "Use the Hunter package manager" OFF)
 
 if(NOT HUNTER_ENABLED)
