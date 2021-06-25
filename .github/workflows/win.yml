@@ -12,9 +12,9 @@ jobs:
       - name: build
         shell: bash
         run: |
-          cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_SANITIZERS=On
-          make
+          cmake .
+          make all
       - name: test
         shell: bash
         run: |
-          make check
+          make test
