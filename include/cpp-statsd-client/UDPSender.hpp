@@ -2,9 +2,9 @@
 #define UDP_SENDER_HPP
 
 #if _WIN32
+#include <io.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <io.h>
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
