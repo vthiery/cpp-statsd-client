@@ -1,6 +1,7 @@
 # simple makefile to build, test and clean
 
 BUILD_MODE ?= Release
+ENABLE_COVERAGE ?= On
 
 build: clean
 	@echo "Build in ${BUILD_MODE} mode"
@@ -10,6 +11,9 @@ build: clean
 
 test: build
 	@cd bin/${BUILD_MODE}; make test
+
+coverage: build
+	@cd bin/${BUILD_MODE}; make coverage
 
 install: build
 	@cd bin/${BUILD_MODE}; make install
