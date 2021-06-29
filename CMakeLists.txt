@@ -7,9 +7,21 @@ project(cpp-statsd-client
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_EXTENSIONS OFF)
+option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads)
+
+# Optional code coverage targets
+if(ENABLE_COVERAGE)
+  set(COVERAGE_EXCLUDES /usr/*)
+  include(${PROJECT_SOURCE_DIR}/cmake/CodeCoverage.cmake)
+  APPEND_COVERAGE_COMPILER_FLAGS()
+  SETUP_TARGET_FOR_COVERAGE_LCOV(NAME coverage
+                                 EXECUTABLE testStatsdClient
+                                 DEPENDENCIES ${PROJECT_NAME}
+  )
+endif()
 
 # The library target
 add_library(${PROJECT_NAME} INTERFACE)
