@@ -74,13 +74,13 @@ void testReconfigure() {
     //  batches being dropped vs sent on reconfiguring
 }
 
-void testSendRecv(uint64_t batchSize) {
+void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     StatsdServer mock_server;
     std::vector<std::string> messages, expected;
     std::thread server(mock, std::ref(mock_server), std::ref(messages));
 
     // Set a new config that has the client send messages to a proper address that can be resolved
-    StatsdClient client("localhost", 8125, "sendRecv.", batchSize);
+    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval);
     throwOnError(client);
 
     // TODO: I forget if we need to wait for the server to be ready here before sending the first stats
@@ -124,9 +124,9 @@ void testSendRecv(uint64_t batchSize) {
         expected.emplace_back("sendRecv.tutu:1227|s");
 
         // Gauge but with tags
-        client.gauge("dr.rösti.grabe", 333, 1.f, {"liegt", "im", "weste"});
+        client.gauge("dr.röstigrabe", 333, 1.f, {"liegt", "im", "weste"});
         throwOnError(client);
-        expected.emplace_back("sendRecv.dr.rösti.grabe:333|g|#liegt,im,weste");
+        expected.emplace_back("sendRecv.dr.röstigrabe:333|g|#liegt,im,weste");
 
         // All the things
         client.count("foo", -42, .9f, {"bar", "baz"});
@@ -136,6 +136,11 @@ void testSendRecv(uint64_t batchSize) {
 
     // Signal the mock server we are done
     client.timing("DONE", 0);
+
+    // If manual flushing do it now
+    if (sendInterval == 0) {
+        client.flush();
+    }
 
     // Wait for the server to stop
     server.join();
@@ -162,9 +167,11 @@ int main() {
     // reconfiguring how you are sending
     testReconfigure();
     // no batching
-    testSendRecv(0);
+    testSendRecv(0, 0);
     // background batching
-    testSendRecv(4);
+    testSendRecv(32, 1000);
+    // manual flushing of batches
+    testSendRecv(16, 0);
 
     return EXIT_SUCCESS;
 }

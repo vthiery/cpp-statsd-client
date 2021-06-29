@@ -35,7 +35,10 @@ public:
     //!@{
 
     //! Constructor
-    UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize = 0) noexcept;
+    UDPSender(const std::string& host,
+              const uint16_t port,
+              const uint64_t batchsize,
+              const uint64_t sendInterval) noexcept;
 
     //! Destructor
     ~UDPSender();
@@ -45,7 +48,7 @@ public:
     //!@name Methods
     //!@{
 
-    //! Send a message
+    //! Send or enqueue a message
     void send(const std::string& message) noexcept;
 
     //! Returns the error message as a string
@@ -53,6 +56,9 @@ public:
 
     //! Returns true if the sender is initialized
     bool initialized() const noexcept;
+
+    //! Flushes any queued messages
+    void flush() noexcept;
 
     //!@}
 
@@ -100,14 +106,14 @@ private:
     // @name Batching info
     // @{
 
-    //! Shall the sender use batching?
-    bool m_batching{false};
-
     //! The batching size
     uint64_t m_batchsize;
 
+    //! The sending frequency in milliseconds
+    uint64_t m_sendInterval;
+
     //! The queue batching the messages
-    mutable std::deque<std::string> m_batchingMessageQueue;
+    std::deque<std::string> m_batchingMessageQueue;
 
     //! The mutex used for batching
     std::mutex m_batchingMutex;
@@ -124,24 +130,20 @@ private:
     static constexpr int k_invalidFd{-1};
 };
 
-inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize) noexcept
-    : m_host(host), m_port(port) {
+inline UDPSender::UDPSender(const std::string& host,
+                            const uint16_t port,
+                            const uint64_t batchsize,
+                            const uint64_t sendInterval) noexcept
+    : m_host(host), m_port(port), m_batchsize(batchsize), m_sendInterval(sendInterval) {
     // Initialize the socket
     if (!initialize()) {
         return;
     }
 
     // If batching is on, use a dedicated thread to send after the wait time is reached
-    if (batchsize != 0) {
-        // Thread' sleep duration between batches
-        // TODO: allow to input this
-        constexpr unsigned int batchingWait{1000U};
-
-        m_batching = true;
-        m_batchsize = batchsize;
-
+    if (m_batchsize != 0 && m_sendInterval > 0) {
         // Define the batching thread
-        m_batchingThread = std::thread([this, batchingWait] {
+        m_batchingThread = std::thread([this] {
             // TODO: this will drop unsent stats, should we send all the unsent stats before we exit?
             while (!m_mustExit.load(std::memory_order_acq_rel)) {
                 std::deque<std::string> stagedMessageQueue;
@@ -157,7 +159,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
                 }
 
                 // Wait before sending the next batch
-                std::this_thread::sleep_for(std::chrono::milliseconds(batchingWait));
+                std::this_thread::sleep_for(std::chrono::milliseconds(m_sendInterval));
             }
         });
     }
@@ -168,11 +170,13 @@ inline UDPSender::~UDPSender() {
         return;
     }
 
-    if (m_batching) {
+    // If we're running a background thread tell it to stop
+    if (m_batchingThread.joinable()) {
         m_mustExit.store(true, std::memory_order_acq_rel);
         m_batchingThread.join();
     }
 
+    // Cleanup the socket
 #ifdef _WIN32
     closesocket(m_socket);
 #else
@@ -182,17 +186,21 @@ inline UDPSender::~UDPSender() {
 
 inline void UDPSender::send(const std::string& message) noexcept {
     m_errorMessage.clear();
+
     // If batching is on, accumulate messages in the queue
-    if (m_batching) {
+    if (m_batchsize > 0) {
         queueMessage(message);
         return;
     }
 
+    // Or send it right now
     sendToDaemon(message);
 }
 
 inline void UDPSender::queueMessage(const std::string& message) noexcept {
-    std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
+    // We aquire a lock but only if we actually need to (i.e. there is a thread also accessing the queue)
+    auto batchingLock =
+        m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
     // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
     if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
         m_batchingMessageQueue.emplace_back();
@@ -268,6 +276,17 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
 
 inline bool UDPSender::initialized() const noexcept {
     return m_socket != k_invalidFd;
+}
+
+inline void UDPSender::flush() noexcept {
+    // We aquire a lock but only if we actually need to (ie there is a thread also accessing the queue)
+    auto batchingLock =
+        m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
+    // Flush the queue
+    while (!m_batchingMessageQueue.empty()) {
+        sendToDaemon(m_batchingMessageQueue.front());
+        m_batchingMessageQueue.pop_front();
+    }
 }
 
 }  // namespace Statsd
