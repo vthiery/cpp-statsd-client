@@ -153,7 +153,7 @@ private:
 };
 
 namespace detail {
-std::string sanitizePrefix(std::string prefix) {
+inline std::string sanitizePrefix(std::string prefix) {
     // For convenience we provide the dot when generating the stat message
     if (!prefix.empty() && prefix.back() == '.') {
         prefix.pop_back();
