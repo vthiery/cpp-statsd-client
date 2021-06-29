@@ -13,7 +13,7 @@ jobs:
         shell: bash
         run: |
           cmake .
-          make all
+          make
       - name: test
         shell: bash
         run: |
