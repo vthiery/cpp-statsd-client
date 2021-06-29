@@ -187,7 +187,7 @@ inline void UDPSender::send(const std::string& message) noexcept {
 }
 
 inline void UDPSender::queueMessage(const std::string& message) noexcept {
-    // We aquire a lock but only if we actually need to (ie there is a thread also accessing the queue)
+    // We aquire a lock but only if we actually need to (i.e. there is a thread also accessing the queue)
     auto batchingLock =
         m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
     // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
