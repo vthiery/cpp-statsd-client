@@ -6,7 +6,7 @@ ENABLE_COVERAGE ?= On
 build: clean
 	@echo "Build in ${BUILD_MODE} mode"
 	mkdir -p bin/${BUILD_MODE}
-	@cd bin/${BUILD_MODE}; cmake ../../ -DCMAKE_BUILD_TYPE=${BUILD_MODE}
+	@cd bin/${BUILD_MODE}; cmake ../../ -DCMAKE_BUILD_TYPE=${BUILD_MODE} -DENABLE_COVERAGE=${ENABLE_COVERAGE}
 	@cd bin/${BUILD_MODE}; make
 
 test: build
