@@ -1,7 +1,7 @@
 #ifndef UDP_SENDER_HPP
 #define UDP_SENDER_HPP
 
-#if _WIN32
+#ifdef _WIN32
 #include <io.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -10,10 +10,11 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <atomic>
 #endif
-#include <sys/types.h>
+
+#include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -172,7 +173,7 @@ inline UDPSender::~UDPSender() {
         m_batchingThread.join();
     }
 
-#if _WIN32
+#ifdef _WIN32
     closesocket(m_socket);
 #else
     close(m_socket);
@@ -234,7 +235,7 @@ inline bool UDPSender::initialize() noexcept {
         const int ret{getaddrinfo(m_host.c_str(), nullptr, &hints, &results)};
         if (ret != 0) {
             // An error code has been returned by getaddrinfo
-#if _WIN32
+#ifdef _WIN32
             closesocket(m_socket);
 #else
             close(m_socket);

@@ -1,9 +1,15 @@
 #ifndef STATSD_SERVER_HPP
 #define STATSD_SERVER_HPP
 
+#ifdef _WIN32
+#include <io.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
 #include <string>
 
 namespace Statsd {
@@ -25,7 +31,11 @@ public:
 
         // Try to bind
         if (bind(m_fd, reinterpret_cast<const struct sockaddr*>(&address), sizeof(address)) != 0) {
+#ifdef _WIN32
+            closesocket(m_fd);
+#else
             close(m_fd);
+#endif
             m_fd = k_invalidFd;
             m_errorMessage = "Could not bind to address and port";
         }
@@ -33,7 +43,11 @@ public:
 
     ~StatsdServer() {
         if (isValidFd(m_fd)) {
+#ifdef _WIN32
+            closesocket(m_fd);
+#else
             close(m_fd);
+#endif
         }
     }
 
