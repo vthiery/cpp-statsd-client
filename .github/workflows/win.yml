@@ -10,11 +10,11 @@ jobs:
         run: |
           choco install make cmake
       - name: build
-        shell: bash
         run: |
-          cmake .
+          mkdir build
+          cd build
+          cmake .. -DCOVERAGE_ENABLED=Off
           make
       - name: test
-        shell: bash
         run: |
-          make test
+          make -C test

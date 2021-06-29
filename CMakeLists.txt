@@ -8,13 +8,13 @@ project(cpp-statsd-client
 
 option(BUILD_TESTS "Build tests" ON)
 option(HUNTER_ENABLED "Use the Hunter package manager" OFF)
+option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
 
 if(NOT HUNTER_ENABLED)
   set(CMAKE_CXX_STANDARD 11)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads)
