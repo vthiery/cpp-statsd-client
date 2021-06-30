@@ -163,7 +163,7 @@ inline std::string sanitizePrefix(std::string prefix) {
 
 // All supported metric types
 constexpr char METRIC_TYPE_COUNT[] = "c";
-constexpr char METRIC_TYPE_GUAGE[] = "g";
+constexpr char METRIC_TYPE_GAUGE[] = "g";
 constexpr char METRIC_TYPE_TIMING[] = "ms";
 constexpr char METRIC_TYPE_SET[] = "s";
 }  // namespace detail
@@ -216,7 +216,7 @@ inline void StatsdClient::gauge(const std::string& key,
                                 const unsigned int value,
                                 const float frequency,
                                 const std::vector<std::string>& tags) const noexcept {
-    return send(key, value, detail::METRIC_TYPE_GUAGE, frequency, tags);
+    return send(key, value, detail::METRIC_TYPE_GAUGE, frequency, tags);
 }
 
 inline void StatsdClient::timing(const std::string& key,
