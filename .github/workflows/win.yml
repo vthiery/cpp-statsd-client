@@ -11,10 +11,8 @@ jobs:
           choco install make cmake
       - name: build
         run: |
-          mkdir build
-          cd build
-          cmake ..
-          make
+          cmake -H . -B build -G "Visual Studio 15 2017" -A x64
+          cmake --build build --target ALL_BUILD --config Release
       - name: test
         run: |
           make -C test
