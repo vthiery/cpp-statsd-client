@@ -5,11 +5,19 @@
 #include <io.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
+using SOCKET_TYPE = SOCKET;
+constexpr SOCKET_TYPE k_invalidFd{INVALID_SOCKET};
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+using SOCKET_TYPE = int;
+constexpr SOCKET_TYPE k_invalidFd{-1};
 #endif
+
+#include <algorithm>
 #include <string>
 
 namespace Statsd {
@@ -63,8 +71,8 @@ public:
 
         // Try to receive (this is blocking)
         std::string buffer(256, '\0');
-        int string_len = -1;
-        if ((string_len = recv(m_fd, &buffer[0], buffer.size(), 0)) < 1) {
+        int string_len;
+        if ((string_len = recv(m_fd, &buffer[0], static_cast<int>(buffer.size()), 0)) < 1) {
             m_errorMessage = "Could not recv on the socket file descriptor";
             return "";
         }
@@ -76,13 +84,12 @@ public:
     }
 
 private:
-    static inline bool isValidFd(const int fd) {
+    static inline bool isValidFd(const SOCKET_TYPE fd) {
         return fd != k_invalidFd;
     }
 
-    int m_fd;
+    SOCKET_TYPE m_fd;
     std::string m_errorMessage;
-    static constexpr int k_invalidFd{-1};
 };
 
 }  // namespace Statsd
