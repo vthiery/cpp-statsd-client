@@ -6,7 +6,7 @@ project(cpp-statsd-client
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
 
-option(BUILD_TESTS "Build tests" ON)
+option(ENABLE_TESTS "Build tests" ON)
 option(HUNTER_ENABLED "Use the Hunter package manager" OFF)
 option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
 
@@ -64,10 +64,14 @@ install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
 
-if(BUILD_TESTS)
+if(ENABLE_TESTS)
   # The test targets
   add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
-  target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
+  if(WIN32)
+    target_compile_options(testStatsdClient PRIVATE -Wall -WX)
+  else()
+    target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
+  endif()
   target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(testStatsdClient ${PROJECT_NAME})
 
