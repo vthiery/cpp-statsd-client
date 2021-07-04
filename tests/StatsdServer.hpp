@@ -2,6 +2,8 @@
 #define STATSD_SERVER_HPP
 
 #ifdef _WIN32
+#define NOMINMAX
+
 #include <io.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
