@@ -81,7 +81,7 @@ public:
 
         // No error return the trimmed result
         m_errorMessage.clear();
-        buffer.resize(std::min(string_len, static_cast<int>(buffer.size())));
+        buffer.resize(std::min(static_cast<size_t>(string_len), buffer.size()));
         return buffer;
     }
 
