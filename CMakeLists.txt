@@ -68,7 +68,7 @@ if(ENABLE_TESTS)
   # The test targets
   add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
   if(WIN32)
-    target_compile_options(testStatsdClient PRIVATE -Wall -WX /external:W0)
+    target_compile_options(testStatsdClient PRIVATE -W4 -WX /external:W0)
   else()
     target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
   endif()
