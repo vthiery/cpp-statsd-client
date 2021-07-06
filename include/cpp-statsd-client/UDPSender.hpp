@@ -2,6 +2,7 @@
 #define UDP_SENDER_HPP
 
 #ifdef _WIN32
+#define NOMINMAX
 #include <io.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -22,6 +23,15 @@
 #include <thread>
 
 namespace Statsd {
+
+#ifdef _WIN32
+using SOCKET_TYPE = SOCKET;
+constexpr SOCKET_TYPE k_invalidSocket{INVALID_SOCKET};
+#else
+using SOCKET_TYPE = int;
+constexpr SOCKET_TYPE k_invalidSocket{-1};
+#endif
+
 /*!
  *
  * UDP sender
@@ -99,7 +109,7 @@ private:
     struct sockaddr_in m_server;
 
     //! The socket to be used
-    int m_socket{-1};
+    SOCKET_TYPE m_socket = k_invalidSocket;
 
     //!@}
 
@@ -125,10 +135,11 @@ private:
 
     //! Error message (optional string)
     std::string m_errorMessage;
-
-    //! Bad file descriptor
-    static constexpr int k_invalidFd{-1};
 };
+
+inline bool isValidSocket(const SOCKET_TYPE socket) {
+    return socket != k_invalidSocket;
+}
 
 inline UDPSender::UDPSender(const std::string& host,
                             const uint16_t port,
@@ -220,7 +231,7 @@ inline const std::string& UDPSender::errorMessage() const noexcept {
 inline bool UDPSender::initialize() noexcept {
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (m_socket == k_invalidFd) {
+    if (!isValidSocket(m_socket)) {
         m_errorMessage = std::string("socket creation failed: err=") + std::strerror(errno);
         return false;
     }
@@ -248,7 +259,7 @@ inline bool UDPSender::initialize() noexcept {
 #else
             close(m_socket);
 #endif
-            m_socket = k_invalidFd;
+            m_socket = k_invalidSocket;
             m_errorMessage = "getaddrinfo failed: err=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
         }
@@ -275,7 +286,7 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
 }
 
 inline bool UDPSender::initialized() const noexcept {
-    return m_socket != k_invalidFd;
+    return m_socket != k_invalidSocket;
 }
 
 inline void UDPSender::flush() noexcept {

@@ -1,23 +1,9 @@
 #ifndef STATSD_SERVER_HPP
 #define STATSD_SERVER_HPP
 
-#ifdef _WIN32
-#define NOMINMAX
-
-#include <io.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-using SOCKET_TYPE = SOCKET;
-constexpr SOCKET_TYPE k_invalidFd{INVALID_SOCKET};
-#else
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-using SOCKET_TYPE = int;
-constexpr SOCKET_TYPE k_invalidFd{-1};
-#endif
+// It might make sense to include this test class in the UDPSender header
+// it includes most of the cross platform defines etc that we need for socket io
+#include "cpp-statsd-client/UDPSender.hpp"
 
 #include <algorithm>
 #include <string>
@@ -28,7 +14,7 @@ class StatsdServer {
 public:
     StatsdServer(unsigned short port = 8125) noexcept {
         // Create the fd
-        if (!isValidFd(m_fd = socket(AF_INET, SOCK_DGRAM, 0))) {
+        if (!isValidSocket(m_socket = socket(AF_INET, SOCK_DGRAM, 0))) {
             m_errorMessage = "Could not create socket file descriptor";
             return;
         }
@@ -40,23 +26,23 @@ public:
         address.sin_addr.s_addr = INADDR_ANY;
 
         // Try to bind
-        if (bind(m_fd, reinterpret_cast<const struct sockaddr*>(&address), sizeof(address)) != 0) {
+        if (bind(m_socket, reinterpret_cast<const struct sockaddr*>(&address), sizeof(address)) != 0) {
 #ifdef _WIN32
-            closesocket(m_fd);
+            closesocket(m_socket);
 #else
-            close(m_fd);
+            close(m_socket);
 #endif
-            m_fd = k_invalidFd;
+            m_socket = k_invalidSocket;
             m_errorMessage = "Could not bind to address and port";
         }
     }
 
     ~StatsdServer() {
-        if (isValidFd(m_fd)) {
+        if (isValidSocket(m_socket)) {
 #ifdef _WIN32
-            closesocket(m_fd);
+            closesocket(m_socket);
 #else
-            close(m_fd);
+            close(m_socket);
 #endif
         }
     }
@@ -67,14 +53,14 @@ public:
 
     std::string receive() noexcept {
         // If uninitialized then bail
-        if (!isValidFd(m_fd)) {
+        if (!isValidSocket(m_socket)) {
             return "";
         }
 
         // Try to receive (this is blocking)
         std::string buffer(256, '\0');
         int string_len;
-        if ((string_len = recv(m_fd, &buffer[0], static_cast<int>(buffer.size()), 0)) < 1) {
+        if ((string_len = recv(m_socket, &buffer[0], static_cast<int>(buffer.size()), 0)) < 1) {
             m_errorMessage = "Could not recv on the socket file descriptor";
             return "";
         }
@@ -86,11 +72,7 @@ public:
     }
 
 private:
-    static inline bool isValidFd(const SOCKET_TYPE fd) {
-        return fd != k_invalidFd;
-    }
-
-    SOCKET_TYPE m_fd;
+    SOCKET_TYPE m_socket;
     std::string m_errorMessage;
 };
 
