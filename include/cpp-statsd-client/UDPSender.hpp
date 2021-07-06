@@ -41,7 +41,7 @@ constexpr SOCKET_TYPE k_invalidSocket{-1};
  */
 class UDPSender final {
 public:
-    //!@name Constructor and destructor
+    //!@name Constructor and destructor, non-copyable
     //!@{
 
     //! Constructor
@@ -52,6 +52,10 @@ public:
 
     //! Destructor
     ~UDPSender();
+
+    UDPSender(const UDPSender&) = delete;
+    UDPSender& operator=(const UDPSender&) = delete;
+    UDPSender(UDPSender&&) = delete;
 
     //!@}
 
@@ -232,7 +236,7 @@ inline bool UDPSender::initialize() noexcept {
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (!isValidSocket(m_socket)) {
-        m_errorMessage = std::string("socket creation failed: err=") + std::strerror(errno);
+        m_errorMessage = "socket creation failed: errno=" + std::to_string(errno);
         return false;
     }
 
@@ -281,7 +285,7 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
         sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
     if (ret == -1) {
         m_errorMessage =
-            "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
+            "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::to_string(errno);
     }
 }
 
