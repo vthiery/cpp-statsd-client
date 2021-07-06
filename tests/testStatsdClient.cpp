@@ -15,7 +15,7 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
         auto recvd = server.receive();
 
         // Split the messages on '\n'
-        std::string::size_type start = -1;
+        auto start = std::string::npos;
         do {
             // Keep this message
             auto end = recvd.find('\n', ++start);
