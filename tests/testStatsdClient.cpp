@@ -164,21 +164,16 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
 int main() {
     // If any of these tests fail they throw an exception, not catching makes for a nonzero return code
 
-    try {
-        // general things that should be errors
-        testErrorConditions();
-        // reconfiguring how you are sending
-        testReconfigure();
-        // no batching
-        testSendRecv(0, 0);
-        // background batching
-        testSendRecv(32, 1000);
-        // manual flushing of batches
-        testSendRecv(16, 0);
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
+    // general things that should be errors
+    testErrorConditions();
+    // reconfiguring how you are sending
+    testReconfigure();
+    // no batching
+    testSendRecv(0, 0);
+    // background batching
+    testSendRecv(32, 1000);
+    // manual flushing of batches
+    testSendRecv(16, 0);
 
     return EXIT_SUCCESS;
 }

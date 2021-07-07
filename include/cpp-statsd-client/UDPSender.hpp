@@ -28,10 +28,12 @@ namespace Statsd {
 using SOCKET_TYPE = SOCKET;
 constexpr SOCKET_TYPE k_invalidSocket{INVALID_SOCKET};
 #define SOCKET_ERRNO WSAGetLastError()
+#define SOCKET_CLOSE closesocket
 #else
 using SOCKET_TYPE = int;
 constexpr SOCKET_TYPE k_invalidSocket{-1};
 #define SOCKET_ERRNO errno
+#define SOCKET_CLOSE close
 #endif
 
 /*!
@@ -143,8 +145,13 @@ private:
     std::string m_errorMessage;
 };
 
-#ifdef _WIN32
 namespace detail {
+
+inline bool isValidSocket(const SOCKET_TYPE socket) {
+    return socket != k_invalidSocket;
+}
+
+#ifdef _WIN32
 struct WinSockSingleton {
     inline static const WinSockSingleton& getInstance() {
         static const WinSockSingleton instance;
@@ -164,12 +171,9 @@ private:
     }
     bool m_ok;
 };
-}  // namespace detail
 #endif
 
-inline bool isValidSocket(const SOCKET_TYPE socket) {
-    return socket != k_invalidSocket;
-}
+}  // namespace detail
 
 inline UDPSender::UDPSender(const std::string& host,
                             const uint16_t port,
@@ -218,11 +222,7 @@ inline UDPSender::~UDPSender() {
     }
 
     // Cleanup the socket
-#ifdef _WIN32
-    closesocket(m_socket);
-#else
-    close(m_socket);
-#endif
+    SOCKET_CLOSE(m_socket);
 }
 
 inline void UDPSender::send(const std::string& message) noexcept {
@@ -267,7 +267,7 @@ inline bool UDPSender::initialize() noexcept {
 
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (!isValidSocket(m_socket)) {
+    if (!detail::isValidSocket(m_socket)) {
         m_errorMessage = "socket creation failed: errno=" + std::to_string(SOCKET_ERRNO);
         return false;
     }
@@ -290,11 +290,7 @@ inline bool UDPSender::initialize() noexcept {
         const int ret{getaddrinfo(m_host.c_str(), nullptr, &hints, &results)};
         if (ret != 0) {
             // An error code has been returned by getaddrinfo
-#ifdef _WIN32
-            closesocket(m_socket);
-#else
-            close(m_socket);
-#endif
+            SOCKET_CLOSE(m_socket);
             m_socket = k_invalidSocket;
             m_errorMessage = "getaddrinfo failed: err=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
@@ -318,7 +314,7 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
 #ifdef _WIN32
                             static_cast<int>(message.size()),
 #else
-                            static_cast<int>(message.size()),
+                            message.size(),
 #endif
                             0,
                             (struct sockaddr*)&m_server,

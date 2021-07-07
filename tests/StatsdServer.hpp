@@ -19,9 +19,9 @@ public:
         }
 #endif
 
-        // Create the fd
+        // Create the socket
         m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (!isValidSocket(m_socket)) {
+        if (!detail::isValidSocket(m_socket)) {
             m_errorMessage = "socket creation failed: errno=" + std::to_string(SOCKET_ERRNO);
             return;
         }
@@ -34,23 +34,15 @@ public:
 
         // Try to bind
         if (bind(m_socket, reinterpret_cast<const struct sockaddr*>(&address), sizeof(address)) != 0) {
-#ifdef _WIN32
-            closesocket(m_socket);
-#else
-            close(m_socket);
-#endif
+            SOCKET_CLOSE(m_socket);
             m_socket = k_invalidSocket;
             m_errorMessage = "bind failed: errno=" + std::to_string(SOCKET_ERRNO);
         }
     }
 
     ~StatsdServer() {
-        if (isValidSocket(m_socket)) {
-#ifdef _WIN32
-            closesocket(m_socket);
-#else
-            close(m_socket);
-#endif
+        if (detail::isValidSocket(m_socket)) {
+            SOCKET_CLOSE(m_socket);
         }
     }
 
@@ -60,7 +52,7 @@ public:
 
     std::string receive() noexcept {
         // If uninitialized then bail
-        if (!isValidSocket(m_socket)) {
+        if (!detail::isValidSocket(m_socket)) {
             return "";
         }
 
