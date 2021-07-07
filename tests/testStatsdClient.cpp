@@ -38,6 +38,14 @@ void throwOnError(const StatsdClient& client, bool expectEmpty = true, const std
     }
 }
 
+void throwOnWrongMessage(StatsdServer& server, const std::string& expected) {
+    auto actual = server.receive();
+    if (actual != expected) {
+        std::cerr << "Expected: " << expected << " but got: " << actual << std::endl;
+        throw std::runtime_error("Incorrect stat received");
+    }
+}
+
 void testErrorConditions() {
     // Resolve a rubbish ip and make sure initialization failed
     StatsdClient client{"256.256.256.256", 8125, "myPrefix", 20};
@@ -49,26 +57,18 @@ void testReconfigure() {
 
     StatsdClient client("localhost", 8125, "first.");
     client.increment("foo");
-    if (server.receive() != "first.foo:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "first.foo:1|c");
 
     client.setConfig("localhost", 8125, "second");
     client.increment("bar");
-    if (server.receive() != "second.bar:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "second.bar:1|c");
 
     client.setConfig("localhost", 8125, "");
     client.increment("third.baz");
-    if (server.receive() != "third.baz:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "third.baz:1|c");
 
     client.increment("");
-    if (server.receive() != ":1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, ":1|c");
 
     // TODO: test what happens with the batching after resolving the question about incomplete
     //  batches being dropped vs sent on reconfiguring
@@ -174,7 +174,7 @@ int main() {
         // manual flushing of batches
         testSendRecv(16, 0);
     } catch (const std::exception& e) {
-        std::cerr << e.what();
+        std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
