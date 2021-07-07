@@ -6,14 +6,14 @@ project(cpp-statsd-client
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
 
-option(ENABLE_TESTS "Build tests" ON)
-option(HUNTER_ENABLED "Use the Hunter package manager" OFF)
-option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
-
-if(NOT HUNTER_ENABLED)
-  set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_CXX_EXTENSIONS OFF)
+option(CPP_STATSD_STANDALONE "Allows configuration of targets for verifying library functionality" ON)
+if(${CPP_STATSD_STANDALONE})
+  option(ENABLE_TESTS "Build tests" ON)
+  option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
 endif()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
