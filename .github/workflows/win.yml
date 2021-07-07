@@ -15,4 +15,4 @@ jobs:
           cmake --build build --target ALL_BUILD --config Release
       - name: test
         run: |
-          build\testStatsdClient #cmake --build build --target RUN_TESTS --config Release
+          ctest --test-dir build --verbose #cmake --build build --target RUN_TESTS --config Release
