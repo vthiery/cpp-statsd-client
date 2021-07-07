@@ -7,9 +7,12 @@ project(cpp-statsd-client
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
 
 option(CPP_STATSD_STANDALONE "Allows configuration of targets for verifying library functionality" ON)
-if(${CPP_STATSD_STANDALONE})
-  option(ENABLE_TESTS "Build tests" ON)
-  option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
+option(ENABLE_TESTS "Build tests" ON)
+option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
+
+if(NOT CPP_STATSD_STANDALONE)
+  set(ENABLE_TESTS OFF)
+  set(ENABLE_COVERAGE OFF)
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
