@@ -27,9 +27,11 @@ namespace Statsd {
 #ifdef _WIN32
 using SOCKET_TYPE = SOCKET;
 constexpr SOCKET_TYPE k_invalidSocket{INVALID_SOCKET};
+#define SOCKET_ERRNO WSAGetLastError()
 #else
 using SOCKET_TYPE = int;
 constexpr SOCKET_TYPE k_invalidSocket{-1};
+#define SOCKET_ERRNO errno
 #endif
 
 /*!
@@ -141,6 +143,30 @@ private:
     std::string m_errorMessage;
 };
 
+#ifdef _WIN32
+namespace detail {
+struct WinSockSingleton {
+    inline static const WinSockSingleton& getInstance() {
+        static const WinSockSingleton instance;
+        return instance;
+    }
+    inline bool ok() const {
+        return m_ok;
+    }
+    ~WinSockSingleton() {
+        WSACleanup();
+    }
+
+private:
+    WinSockSingleton() {
+        WSADATA wsa;
+        m_ok = WSAStartup(MAKEWORD(2, 2), &wsa) == 0;
+    }
+    bool m_ok;
+};
+}  // namespace detail
+#endif
+
 inline bool isValidSocket(const SOCKET_TYPE socket) {
     return socket != k_invalidSocket;
 }
@@ -160,7 +186,7 @@ inline UDPSender::UDPSender(const std::string& host,
         // Define the batching thread
         m_batchingThread = std::thread([this] {
             // TODO: this will drop unsent stats, should we send all the unsent stats before we exit?
-            while (!m_mustExit.load(std::memory_order_acq_rel)) {
+            while (!m_mustExit.load(std::memory_order_acquire)) {
                 std::deque<std::string> stagedMessageQueue;
 
                 std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
@@ -187,7 +213,7 @@ inline UDPSender::~UDPSender() {
 
     // If we're running a background thread tell it to stop
     if (m_batchingThread.joinable()) {
-        m_mustExit.store(true, std::memory_order_acq_rel);
+        m_mustExit.store(true, std::memory_order_release);
         m_batchingThread.join();
     }
 
@@ -233,10 +259,16 @@ inline const std::string& UDPSender::errorMessage() const noexcept {
 }
 
 inline bool UDPSender::initialize() noexcept {
+#ifdef _WIN32
+    if (!detail::WinSockSingleton::getInstance().ok()) {
+        m_errorMessage = "WSAStartup failed: errno=" + std::to_string(SOCKET_ERRNO);
+    }
+#endif
+
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (!isValidSocket(m_socket)) {
-        m_errorMessage = "socket creation failed: errno=" + std::to_string(errno);
+        m_errorMessage = "socket creation failed: errno=" + std::to_string(SOCKET_ERRNO);
         return false;
     }
 
@@ -292,8 +324,8 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
                             (struct sockaddr*)&m_server,
                             sizeof(m_server));
     if (ret == -1) {
-        m_errorMessage =
-            "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::to_string(errno);
+        m_errorMessage = "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) +
+                         ", err=" + std::to_string(SOCKET_ERRNO);
     }
 }
 

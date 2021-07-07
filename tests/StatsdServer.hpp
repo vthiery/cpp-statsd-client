@@ -13,10 +13,16 @@ namespace Statsd {
 class StatsdServer {
 public:
     StatsdServer(unsigned short port = 8125) noexcept {
+#ifdef _WIN32
+        if (!detail::WinSockSingleton::getInstance().ok()) {
+            m_errorMessage = "WSAStartup failed: errno=" + std::to_string(SOCKET_ERRNO);
+        }
+#endif
+
         // Create the fd
         m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (!isValidSocket(m_socket)) {
-            m_errorMessage = "socket creation failed: errno=" + std::to_string(errno);
+            m_errorMessage = "socket creation failed: errno=" + std::to_string(SOCKET_ERRNO);
             return;
         }
 
@@ -34,7 +40,7 @@ public:
             close(m_socket);
 #endif
             m_socket = k_invalidSocket;
-            m_errorMessage = "bind failed: errno=" + std::to_string(errno);
+            m_errorMessage = "bind failed: errno=" + std::to_string(SOCKET_ERRNO);
         }
     }
 
