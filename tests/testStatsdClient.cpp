@@ -31,10 +31,11 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
     } while (server.errorMessage().empty() && !messages.back().empty());
 }
 
-void throwOnError(const StatsdClient& client, bool expectEmpty = true, const std::string& extraMessage = "") {
-    if (client.errorMessage().empty() != expectEmpty) {
-        std::cerr << (expectEmpty ? client.errorMessage() : extraMessage) << std::endl;
-        throw std::runtime_error(expectEmpty ? client.errorMessage() : extraMessage);
+template <typename SocketWrapper>
+void throwOnError(const SocketWrapper& wrapped, bool expectEmpty = true, const std::string& extraMessage = "") {
+    if (wrapped.errorMessage().empty() != expectEmpty) {
+        std::cerr << (expectEmpty ? wrapped.errorMessage() : extraMessage) << std::endl;
+        throw std::runtime_error(expectEmpty ? wrapped.errorMessage() : extraMessage);
     }
 }
 
@@ -54,6 +55,7 @@ void testErrorConditions() {
 
 void testReconfigure() {
     StatsdServer server;
+    throwOnError(server);
 
     StatsdClient client("localhost", 8125, "first.");
     client.increment("foo");
