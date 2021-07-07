@@ -16,7 +16,7 @@ public:
         // Create the fd
         m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (!isValidSocket(m_socket)) {
-            m_errorMessage = "Could not create socket";
+            m_errorMessage = "socket creation failed: errno=" + std::to_string(errno);
             return;
         }
 
