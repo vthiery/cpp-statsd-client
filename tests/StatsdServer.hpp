@@ -14,8 +14,9 @@ class StatsdServer {
 public:
     StatsdServer(unsigned short port = 8125) noexcept {
         // Create the fd
-        if (!isValidSocket(m_socket = socket(AF_INET, SOCK_DGRAM, 0))) {
-            m_errorMessage = "Could not create socket file descriptor";
+        m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (!isValidSocket(m_socket)) {
+            m_errorMessage = "Could not create socket";
             return;
         }
 
