@@ -34,7 +34,7 @@ public:
             close(m_socket);
 #endif
             m_socket = k_invalidSocket;
-            m_errorMessage = "Could not bind to address and port";
+            m_errorMessage = "bind failed: errno=" + std::to_string(errno);
         }
     }
 
