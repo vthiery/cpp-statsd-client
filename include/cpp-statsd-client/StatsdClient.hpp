@@ -67,7 +67,6 @@ public:
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
-    StatsdClient(StatsdClient&&) = default;
 
     //!@}
 
