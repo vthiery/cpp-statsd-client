@@ -15,7 +15,7 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
         auto recvd = server.receive();
 
         // Split the messages on '\n'
-        std::string::size_type start = -1;
+        auto start = std::string::npos;
         do {
             // Keep this message
             auto end = recvd.find('\n', ++start);
@@ -31,10 +31,19 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
     } while (server.errorMessage().empty() && !messages.back().empty());
 }
 
-void throwOnError(const StatsdClient& client, bool expectEmpty = true, const std::string& extraMessage = "") {
-    if (client.errorMessage().empty() != expectEmpty) {
-        std::cerr << (expectEmpty ? client.errorMessage() : extraMessage) << std::endl;
-        throw std::runtime_error(expectEmpty ? client.errorMessage() : extraMessage);
+template <typename SocketWrapper>
+void throwOnError(const SocketWrapper& wrapped, bool expectEmpty = true, const std::string& extraMessage = "") {
+    if (wrapped.errorMessage().empty() != expectEmpty) {
+        std::cerr << (expectEmpty ? wrapped.errorMessage() : extraMessage) << std::endl;
+        throw std::runtime_error(expectEmpty ? wrapped.errorMessage() : extraMessage);
+    }
+}
+
+void throwOnWrongMessage(StatsdServer& server, const std::string& expected) {
+    auto actual = server.receive();
+    if (actual != expected) {
+        std::cerr << "Expected: " << expected << " but got: " << actual << std::endl;
+        throw std::runtime_error("Incorrect stat received");
     }
 }
 
@@ -46,29 +55,22 @@ void testErrorConditions() {
 
 void testReconfigure() {
     StatsdServer server;
+    throwOnError(server);
 
     StatsdClient client("localhost", 8125, "first.");
     client.increment("foo");
-    if (server.receive() != "first.foo:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "first.foo:1|c");
 
     client.setConfig("localhost", 8125, "second");
     client.increment("bar");
-    if (server.receive() != "second.bar:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "second.bar:1|c");
 
     client.setConfig("localhost", 8125, "");
     client.increment("third.baz");
-    if (server.receive() != "third.baz:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "third.baz:1|c");
 
     client.increment("");
-    if (server.receive() != ":1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, ":1|c");
 
     // TODO: test what happens with the batching after resolving the question about incomplete
     //  batches being dropped vs sent on reconfiguring

@@ -5,9 +5,19 @@ project(cpp-statsd-client
         LANGUAGES CXX
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
+
+option(CPP_STATSD_STANDALONE "Allows configuration of targets for verifying library functionality" ON)
+option(ENABLE_TESTS "Build tests" ON)
+option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
+
+if(NOT CPP_STATSD_STANDALONE)
+  set(ENABLE_TESTS OFF)
+  set(ENABLE_COVERAGE OFF)
+endif()
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_EXTENSIONS OFF)
-option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
+
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads)
@@ -30,6 +40,9 @@ target_include_directories(
   INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(${PROJECT_NAME} INTERFACE Threads::Threads)
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} INTERFACE ws2_32)
+endif()
 
 # The installation and pkg-config-like cmake config
 install(TARGETS ${PROJECT_NAME}
@@ -54,13 +67,19 @@ install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
 
-# The test targets
-add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
-target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
-target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-target_link_libraries(testStatsdClient ${PROJECT_NAME})
+if(ENABLE_TESTS)
+  # The test targets
+  add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
+  if(WIN32)
+    target_compile_options(testStatsdClient PRIVATE -W4 -WX /external:W0)
+  else()
+    target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
+  endif()
+  target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+  target_link_libraries(testStatsdClient ${PROJECT_NAME})
 
-# The test suite
-enable_testing()
-add_test(ctestTestStatsdClient testStatsdClient)
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS testStatsdClient)
+  # The test suite
+  enable_testing()
+  add_test(ctestTestStatsdClient testStatsdClient)
+  add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS testStatsdClient)
+endif()

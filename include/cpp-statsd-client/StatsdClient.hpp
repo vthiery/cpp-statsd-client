@@ -55,7 +55,7 @@ namespace Statsd {
  */
 class StatsdClient {
 public:
-    //!@name Constructor and destructor
+    //!@name Constructor and destructor, non-copyable
     //!@{
 
     //! Constructor
