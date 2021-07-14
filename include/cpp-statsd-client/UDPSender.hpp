@@ -14,8 +14,6 @@
 #endif
 
 #include <atomic>
-#endif
-#include <sys/types.h>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
