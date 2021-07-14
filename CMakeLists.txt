@@ -15,9 +15,6 @@ if(NOT CPP_STATSD_STANDALONE)
   set(ENABLE_COVERAGE OFF)
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads)
@@ -77,6 +74,9 @@ if(ENABLE_TESTS)
   endif()
   target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(testStatsdClient ${PROJECT_NAME})
+
+  set_property(TARGET testStatsdClient PROPERTY CXX_STANDARD 11)
+  set_property(TARGET testStatsdClient PROPERTY CXX_EXTENSIONS OFF)
 
   # The test suite
   enable_testing()
