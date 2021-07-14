@@ -15,7 +15,7 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
         auto recvd = server.receive();
 
         // Split the messages on '\n'
-        std::string::size_type start = -1;
+        auto start = std::string::npos;
         do {
             // Keep this message
             auto end = recvd.find('\n', ++start);
@@ -31,10 +31,19 @@ void mock(StatsdServer& server, std::vector<std::string>& messages) {
     } while (server.errorMessage().empty() && !messages.back().empty());
 }
 
-void throwOnError(const StatsdClient& client, bool expectEmpty = true, const std::string& extraMessage = "") {
-    if (client.errorMessage().empty() != expectEmpty) {
-        std::cerr << (expectEmpty ? client.errorMessage() : extraMessage) << std::endl;
-        throw std::runtime_error(expectEmpty ? client.errorMessage() : extraMessage);
+template <typename SocketWrapper>
+void throwOnError(const SocketWrapper& wrapped, bool expectEmpty = true, const std::string& extraMessage = "") {
+    if (wrapped.errorMessage().empty() != expectEmpty) {
+        std::cerr << (expectEmpty ? wrapped.errorMessage() : extraMessage) << std::endl;
+        throw std::runtime_error(expectEmpty ? wrapped.errorMessage() : extraMessage);
+    }
+}
+
+void throwOnWrongMessage(StatsdServer& server, const std::string& expected) {
+    auto actual = server.receive();
+    if (actual != expected) {
+        std::cerr << "Expected: " << expected << " but got: " << actual << std::endl;
+        throw std::runtime_error("Incorrect stat received");
     }
 }
 
@@ -46,41 +55,34 @@ void testErrorConditions() {
 
 void testReconfigure() {
     StatsdServer server;
+    throwOnError(server);
 
     StatsdClient client("localhost", 8125, "first.");
     client.increment("foo");
-    if (server.receive() != "first.foo:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "first.foo:1|c");
 
     client.setConfig("localhost", 8125, "second");
     client.increment("bar");
-    if (server.receive() != "second.bar:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "second.bar:1|c");
 
     client.setConfig("localhost", 8125, "");
     client.increment("third.baz");
-    if (server.receive() != "third.baz:1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, "third.baz:1|c");
 
     client.increment("");
-    if (server.receive() != ":1|c") {
-        throw std::runtime_error("Incorrect stat received");
-    }
+    throwOnWrongMessage(server, ":1|c");
 
     // TODO: test what happens with the batching after resolving the question about incomplete
     //  batches being dropped vs sent on reconfiguring
 }
 
-void testSendRecv(uint64_t batchSize) {
+void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     StatsdServer mock_server;
     std::vector<std::string> messages, expected;
     std::thread server(mock, std::ref(mock_server), std::ref(messages));
 
     // Set a new config that has the client send messages to a proper address that can be resolved
-    StatsdClient client("localhost", 8125, "sendRecv.", batchSize);
+    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval);
     throwOnError(client);
 
     // TODO: I forget if we need to wait for the server to be ready here before sending the first stats
@@ -124,9 +126,9 @@ void testSendRecv(uint64_t batchSize) {
         expected.emplace_back("sendRecv.tutu:1227|s");
 
         // Gauge but with tags
-        client.gauge("dr.rösti.grabe", 333, 1.f, {"liegt", "im", "weste"});
+        client.gauge("dr.röstigrabe", 333, 1.f, {"liegt", "im", "weste"});
         throwOnError(client);
-        expected.emplace_back("sendRecv.dr.rösti.grabe:333|g|#liegt,im,weste");
+        expected.emplace_back("sendRecv.dr.röstigrabe:333|g|#liegt,im,weste");
 
         // All the things
         client.count("foo", -42, .9f, {"bar", "baz"});
@@ -136,6 +138,11 @@ void testSendRecv(uint64_t batchSize) {
 
     // Signal the mock server we are done
     client.timing("DONE", 0);
+
+    // If manual flushing do it now
+    if (sendInterval == 0) {
+        client.flush();
+    }
 
     // Wait for the server to stop
     server.join();
@@ -162,9 +169,11 @@ int main() {
     // reconfiguring how you are sending
     testReconfigure();
     // no batching
-    testSendRecv(0);
+    testSendRecv(0, 0);
     // background batching
-    testSendRecv(4);
+    testSendRecv(32, 1000);
+    // manual flushing of batches
+    testSendRecv(16, 0);
 
     return EXIT_SUCCESS;
 }

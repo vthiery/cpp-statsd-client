@@ -1,7 +1,8 @@
 #ifndef UDP_SENDER_HPP
 #define UDP_SENDER_HPP
 
-#if _WIN32
+#ifdef _WIN32
+#define NOMINMAX
 #include <io.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -10,10 +11,13 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
+
 #include <atomic>
 #endif
 #include <sys/types.h>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -21,6 +25,19 @@
 #include <thread>
 
 namespace Statsd {
+
+#ifdef _WIN32
+using SOCKET_TYPE = SOCKET;
+constexpr SOCKET_TYPE k_invalidSocket{INVALID_SOCKET};
+#define SOCKET_ERRNO WSAGetLastError()
+#define SOCKET_CLOSE closesocket
+#else
+using SOCKET_TYPE = int;
+constexpr SOCKET_TYPE k_invalidSocket{-1};
+#define SOCKET_ERRNO errno
+#define SOCKET_CLOSE close
+#endif
+
 /*!
  *
  * UDP sender
@@ -30,21 +47,28 @@ namespace Statsd {
  */
 class UDPSender final {
 public:
-    //!@name Constructor and destructor
+    //!@name Constructor and destructor, non-copyable
     //!@{
 
     //! Constructor
-    UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize = 0) noexcept;
+    UDPSender(const std::string& host,
+              const uint16_t port,
+              const uint64_t batchsize,
+              const uint64_t sendInterval) noexcept;
 
     //! Destructor
     ~UDPSender();
+
+    UDPSender(const UDPSender&) = delete;
+    UDPSender& operator=(const UDPSender&) = delete;
+    UDPSender(UDPSender&&) = delete;
 
     //!@}
 
     //!@name Methods
     //!@{
 
-    //! Send a message
+    //! Send or enqueue a message
     void send(const std::string& message) noexcept;
 
     //! Returns the error message as a string
@@ -52,6 +76,9 @@ public:
 
     //! Returns true if the sender is initialized
     bool initialized() const noexcept;
+
+    //! Flushes any queued messages
+    void flush() noexcept;
 
     //!@}
 
@@ -92,21 +119,21 @@ private:
     struct sockaddr_in m_server;
 
     //! The socket to be used
-    int m_socket{-1};
+    SOCKET_TYPE m_socket = k_invalidSocket;
 
     //!@}
 
     // @name Batching info
     // @{
 
-    //! Shall the sender use batching?
-    bool m_batching{false};
-
     //! The batching size
     uint64_t m_batchsize;
 
+    //! The sending frequency in milliseconds
+    uint64_t m_sendInterval;
+
     //! The queue batching the messages
-    mutable std::deque<std::string> m_batchingMessageQueue;
+    std::deque<std::string> m_batchingMessageQueue;
 
     //! The mutex used for batching
     std::mutex m_batchingMutex;
@@ -118,31 +145,54 @@ private:
 
     //! Error message (optional string)
     std::string m_errorMessage;
-
-    //! Bad file descriptor
-    static constexpr int k_invalidFd{-1};
 };
 
-inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const uint64_t batchsize) noexcept
-    : m_host(host), m_port(port) {
+namespace detail {
+
+inline bool isValidSocket(const SOCKET_TYPE socket) {
+    return socket != k_invalidSocket;
+}
+
+#ifdef _WIN32
+struct WinSockSingleton {
+    inline static const WinSockSingleton& getInstance() {
+        static const WinSockSingleton instance;
+        return instance;
+    }
+    inline bool ok() const {
+        return m_ok;
+    }
+    ~WinSockSingleton() {
+        WSACleanup();
+    }
+
+private:
+    WinSockSingleton() {
+        WSADATA wsa;
+        m_ok = WSAStartup(MAKEWORD(2, 2), &wsa) == 0;
+    }
+    bool m_ok;
+};
+#endif
+
+}  // namespace detail
+
+inline UDPSender::UDPSender(const std::string& host,
+                            const uint16_t port,
+                            const uint64_t batchsize,
+                            const uint64_t sendInterval) noexcept
+    : m_host(host), m_port(port), m_batchsize(batchsize), m_sendInterval(sendInterval) {
     // Initialize the socket
     if (!initialize()) {
         return;
     }
 
     // If batching is on, use a dedicated thread to send after the wait time is reached
-    if (batchsize != 0) {
-        // Thread' sleep duration between batches
-        // TODO: allow to input this
-        constexpr unsigned int batchingWait{1000U};
-
-        m_batching = true;
-        m_batchsize = batchsize;
-
+    if (m_batchsize != 0 && m_sendInterval > 0) {
         // Define the batching thread
-        m_batchingThread = std::thread([this, batchingWait] {
+        m_batchingThread = std::thread([this] {
             // TODO: this will drop unsent stats, should we send all the unsent stats before we exit?
-            while (!m_mustExit.load(std::memory_order_acq_rel)) {
+            while (!m_mustExit.load(std::memory_order_acquire)) {
                 std::deque<std::string> stagedMessageQueue;
 
                 std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
@@ -156,7 +206,7 @@ inline UDPSender::UDPSender(const std::string& host, const uint16_t port, const 
                 }
 
                 // Wait before sending the next batch
-                std::this_thread::sleep_for(std::chrono::milliseconds(batchingWait));
+                std::this_thread::sleep_for(std::chrono::milliseconds(m_sendInterval));
             }
         });
     }
@@ -167,31 +217,33 @@ inline UDPSender::~UDPSender() {
         return;
     }
 
-    if (m_batching) {
-        m_mustExit.store(true, std::memory_order_acq_rel);
+    // If we're running a background thread tell it to stop
+    if (m_batchingThread.joinable()) {
+        m_mustExit.store(true, std::memory_order_release);
         m_batchingThread.join();
     }
 
-#if _WIN32
-    closesocket(m_socket);
-#else
-    close(m_socket);
-#endif
+    // Cleanup the socket
+    SOCKET_CLOSE(m_socket);
 }
 
 inline void UDPSender::send(const std::string& message) noexcept {
     m_errorMessage.clear();
+
     // If batching is on, accumulate messages in the queue
-    if (m_batching) {
+    if (m_batchsize > 0) {
         queueMessage(message);
         return;
     }
 
+    // Or send it right now
     sendToDaemon(message);
 }
 
 inline void UDPSender::queueMessage(const std::string& message) noexcept {
-    std::unique_lock<std::mutex> batchingLock(m_batchingMutex);
+    // We aquire a lock but only if we actually need to (i.e. there is a thread also accessing the queue)
+    auto batchingLock =
+        m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
     // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
     if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
         m_batchingMessageQueue.emplace_back();
@@ -209,10 +261,16 @@ inline const std::string& UDPSender::errorMessage() const noexcept {
 }
 
 inline bool UDPSender::initialize() noexcept {
+#ifdef _WIN32
+    if (!detail::WinSockSingleton::getInstance().ok()) {
+        m_errorMessage = "WSAStartup failed: errno=" + std::to_string(SOCKET_ERRNO);
+    }
+#endif
+
     // Connect the socket
     m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (m_socket == k_invalidFd) {
-        m_errorMessage = std::string("socket creation failed: err=") + std::strerror(errno);
+    if (!detail::isValidSocket(m_socket)) {
+        m_errorMessage = "socket creation failed: errno=" + std::to_string(SOCKET_ERRNO);
         return false;
     }
 
@@ -234,12 +292,8 @@ inline bool UDPSender::initialize() noexcept {
         const int ret{getaddrinfo(m_host.c_str(), nullptr, &hints, &results)};
         if (ret != 0) {
             // An error code has been returned by getaddrinfo
-#if _WIN32
-            closesocket(m_socket);
-#else
-            close(m_socket);
-#endif
-            m_socket = k_invalidFd;
+            SOCKET_CLOSE(m_socket);
+            m_socket = k_invalidSocket;
             m_errorMessage = "getaddrinfo failed: err=" + std::to_string(ret) + ", msg=" + gai_strerror(ret);
             return false;
         }
@@ -257,16 +311,35 @@ inline bool UDPSender::initialize() noexcept {
 
 inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
     // Try sending the message
-    const long int ret{
-        sendto(m_socket, message.data(), message.size(), 0, (struct sockaddr*)&m_server, sizeof(m_server))};
+    const auto ret = sendto(m_socket,
+                            message.data(),
+#ifdef _WIN32
+                            static_cast<int>(message.size()),
+#else
+                            message.size(),
+#endif
+                            0,
+                            (struct sockaddr*)&m_server,
+                            sizeof(m_server));
     if (ret == -1) {
-        m_errorMessage =
-            "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) + ", err=" + std::strerror(errno);
+        m_errorMessage = "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) +
+                         ", err=" + std::to_string(SOCKET_ERRNO);
     }
 }
 
 inline bool UDPSender::initialized() const noexcept {
-    return m_socket != k_invalidFd;
+    return m_socket != k_invalidSocket;
+}
+
+inline void UDPSender::flush() noexcept {
+    // We aquire a lock but only if we actually need to (ie there is a thread also accessing the queue)
+    auto batchingLock =
+        m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
+    // Flush the queue
+    while (!m_batchingMessageQueue.empty()) {
+        sendToDaemon(m_batchingMessageQueue.front());
+        m_batchingMessageQueue.pop_front();
+    }
 }
 
 }  // namespace Statsd

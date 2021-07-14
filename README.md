@@ -125,15 +125,12 @@ The batchsize is the only parameter that cannot be changed for the time being.
 
 ### Batching
 
-The client supports batching of the metrics:
+The client supports batching of the metrics. The batch size parameter is the number of bytes to allow in each batch (UDP datagram payload) to be sent to the statsd process. This number is not a hard limit. If appending the current stat to the current batch (separated by the `'\n'` character) pushes the current batch over the batch size, that batch is enqueued (not sent) and a new batch is started. If batch size is 0, the default, then each stat is sent individually to the statsd process and no batches are enqueued.
 
-- the unit of the batching parameter is bytes,
-- it is optional and passing a 0 will result in an immediate send of any metrics,
+### Sending
 
-If set, the UDP sender will spawn a thread sending the metrics to the server every 1 second by aggregates. The aggregation logic is as follows:
+As previously mentioned, if batching is disabled (by setting the batch size to 0) then every stat is sent immediately in a blocking fashion. If batching is enabled (ie non-zero) then you may also set the send interval. The send interval controls the time, in milliseconds, to wait before flushing/sending the queued stats batches to the statsd process. When the send interval is non-zero a background thread is spawned which will do the flushing/sending at the configured send interval, in other words asynchronously. The queuing mechanism in this case is *not* lock-free. If batching is enabled but the send interval is set to zero then the queued batchs of stats will not be sent automatically by a background thread but must be sent manually via the `flush` method. The `flush` method is a blocking call.
 
-- if the last message has already reached the batching limit, add a new element in a message queue;
-- otherwise, append the message to the last one, separated by a `\n`.
 
 ### Frequency rate
 

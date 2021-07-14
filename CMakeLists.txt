@@ -6,16 +6,32 @@ project(cpp-statsd-client
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
 
-option(BUILD_TESTS "Build tests" ON)
-option(HUNTER_ENABLED "Use the Hunter package manager" OFF)
+option(CPP_STATSD_STANDALONE "Allows configuration of targets for verifying library functionality" ON)
+option(ENABLE_TESTS "Build tests" ON)
+option(ENABLE_COVERAGE "Build with coverage instrumentalisation" OFF)
 
-if(NOT HUNTER_ENABLED)
-  set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_CXX_EXTENSIONS OFF)
+if(NOT CPP_STATSD_STANDALONE)
+  set(ENABLE_TESTS OFF)
+  set(ENABLE_COVERAGE OFF)
 endif()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads)
+
+# Optional code coverage targets
+if(ENABLE_COVERAGE)
+  set(COVERAGE_EXCLUDES /usr/*)
+  include(${PROJECT_SOURCE_DIR}/cmake/CodeCoverage.cmake)
+  APPEND_COVERAGE_COMPILER_FLAGS()
+  SETUP_TARGET_FOR_COVERAGE_LCOV(NAME coverage
+                                 EXECUTABLE testStatsdClient
+                                 DEPENDENCIES ${PROJECT_NAME}
+  )
+endif()
 
 # The library target
 add_library(${PROJECT_NAME} INTERFACE)
@@ -51,10 +67,14 @@ install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
 
-if(BUILD_TESTS)
+if(ENABLE_TESTS)
   # The test targets
   add_executable(testStatsdClient ${CMAKE_CURRENT_SOURCE_DIR}/tests/testStatsdClient.cpp)
-  target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
+  if(WIN32)
+    target_compile_options(testStatsdClient PRIVATE -W4 -WX /external:W0)
+  else()
+    target_compile_options(testStatsdClient PRIVATE -Wall -Wextra -pedantic -Werror)
+  endif()
   target_include_directories(testStatsdClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(testStatsdClient ${PROJECT_NAME})
 

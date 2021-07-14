@@ -24,23 +24,46 @@ namespace Statsd {
  * key, therefore you should neither append one to the prefix
  * nor prepend one to the key
  *
- * The sampling frequency can be input, as well as the
- * batching size. The latter is the optional limit in
- * number of bytes a batch of stats can be before it is
- * new states are added to a fresh batch. A value of 0
- * means batching is disabled.
+ * The sampling frequency is specified per call and uses a
+ * random number generator to determine whether or not the stat
+ * will be recorded this time or not.
+ *
+ * The top level configuration includes 2 optional parameters
+ * that determine how the stats are delivered to statsd. These
+ * parameters are the batching size and the send interval.
+ *
+ * The batching size controls the number of bytes to send
+ * in each UDP datagram to statsd. This is not a hard limit as
+ * we continue appending to a batch of stats until the limit
+ * has been reached or surpassed. When this occurs we add the
+ * batch to a queue and create a new batch to appended to. A
+ * value of 0 for the batching size will disable batching such
+ * that each stat will be sent to the daemon individually.
+ *
+ * The send interval controls the rate at which queued batches
+ * of stats will be sent to statsd. If batching is disabled,
+ * this value is ignored and each individual stat is sent to
+ * statsd immediately in a blocking fashion. If batching is
+ * enabled (ie. non-zero) then the send interval is the number
+ * of milliseconds to wait before flushing the queue of
+ * batched stats messages to the daemon. This is done in a non-
+ * blocking fashion via a background thread. If the send
+ * interval is 0 then the stats messages are appended to a
+ * queue until the caller manually flushes the queue via the
+ * flush method.
  *
  */
 class StatsdClient {
 public:
-    //!@name Constructor and destructor
+    //!@name Constructor and destructor, non-copyable
     //!@{
 
     //! Constructor
     StatsdClient(const std::string& host,
                  const uint16_t port,
                  const std::string& prefix,
-                 const uint64_t batchsize = 0) noexcept;
+                 const uint64_t batchsize = 0,
+                 const uint64_t sendInterval = 1000) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
@@ -54,7 +77,8 @@ public:
     void setConfig(const std::string& host,
                    const uint16_t port,
                    const std::string& prefix,
-                   const uint64_t batchsize = 0) noexcept;
+                   const uint64_t batchsize = 0,
+                   const uint64_t sendInterval = 1000) noexcept;
 
     //! Returns the error message as an std::string
     const std::string& errorMessage() const noexcept;
@@ -96,6 +120,9 @@ public:
     //! Seed the RNG that controls sampling
     void seed(unsigned int seed = std::random_device()()) noexcept;
 
+    //! Flush any queued stats to the daemon
+    void flush() noexcept;
+
     //!@}
 
 private:
@@ -126,7 +153,7 @@ private:
 };
 
 namespace detail {
-std::string sanitizePrefix(std::string prefix) {
+inline std::string sanitizePrefix(std::string prefix) {
     // For convenience we provide the dot when generating the stat message
     if (!prefix.empty() && prefix.back() == '.') {
         prefix.pop_back();
@@ -136,7 +163,7 @@ std::string sanitizePrefix(std::string prefix) {
 
 // All supported metric types
 constexpr char METRIC_TYPE_COUNT[] = "c";
-constexpr char METRIC_TYPE_GUAGE[] = "g";
+constexpr char METRIC_TYPE_GAUGE[] = "g";
 constexpr char METRIC_TYPE_TIMING[] = "ms";
 constexpr char METRIC_TYPE_SET[] = "s";
 }  // namespace detail
@@ -144,8 +171,9 @@ constexpr char METRIC_TYPE_SET[] = "s";
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
-                                  const uint64_t batchsize) noexcept
-    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize}) {
+                                  const uint64_t batchsize,
+                                  const uint64_t sendInterval) noexcept
+    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize, sendInterval}) {
     // Initialize the random generator to be used for sampling
     seed();
     // Avoid re-allocations by reserving a generous buffer
@@ -155,9 +183,10 @@ inline StatsdClient::StatsdClient(const std::string& host,
 inline void StatsdClient::setConfig(const std::string& host,
                                     const uint16_t port,
                                     const std::string& prefix,
-                                    const uint64_t batchsize) noexcept {
+                                    const uint64_t batchsize,
+                                    const uint64_t sendInterval) noexcept {
     m_prefix = detail::sanitizePrefix(prefix);
-    m_sender.reset(new UDPSender(host, port, batchsize));
+    m_sender.reset(new UDPSender(host, port, batchsize, sendInterval));
 }
 
 inline const std::string& StatsdClient::errorMessage() const noexcept {
@@ -187,7 +216,7 @@ inline void StatsdClient::gauge(const std::string& key,
                                 const unsigned int value,
                                 const float frequency,
                                 const std::vector<std::string>& tags) const noexcept {
-    return send(key, value, detail::METRIC_TYPE_GUAGE, frequency, tags);
+    return send(key, value, detail::METRIC_TYPE_GAUGE, frequency, tags);
 }
 
 inline void StatsdClient::timing(const std::string& key,
@@ -259,6 +288,10 @@ inline void StatsdClient::send(const std::string& key,
 
 inline void StatsdClient::seed(unsigned int seed) noexcept {
     m_randomEngine.seed(seed);
+}
+
+inline void StatsdClient::flush() noexcept {
+    m_sender->flush();
 }
 
 }  // namespace Statsd
