@@ -4,7 +4,8 @@
 
 [![Release](https://img.shields.io/github/release/vthiery/cpp-statsd-client.svg?style=for-the-badge)](https://github.com/vthiery/cpp-statsd-client/releases/latest)
 ![License](https://img.shields.io/github/license/vthiery/cpp-statsd-client?style=for-the-badge)
-[![Test status](https://img.shields.io/github/workflow/status/vthiery/cpp-statsd-client/Test?label=Test&style=for-the-badge)](https://github.com/vthiery/cpp-statsd-client/actions?workflow=Test)
+[![Linux status](https://img.shields.io/github/workflow/status/vthiery/cpp-statsd-client/Linux?label=Linux&style=for-the-badge)](https://github.com/vthiery/cpp-statsd-client/actions/workflows/linux.yml?query=branch%3Amaster++)
+[![Windows status](https://img.shields.io/github/workflow/status/vthiery/cpp-statsd-client/Windows?label=Windows&style=for-the-badge)](https://github.com/vthiery/cpp-statsd-client/actions/workflows/windows.yml?query=branch%3Amaster++)
 
 A header-only StatsD client implemented in C++.
 The client allows:
