@@ -82,7 +82,7 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     std::thread server(mock, std::ref(mock_server), std::ref(messages));
 
     // Set a new config that has the client send messages to a proper address that can be resolved
-    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval);
+    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3);
     throwOnError(client);
 
     // TODO: I forget if we need to wait for the server to be ready here before sending the first stats
@@ -113,6 +113,11 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
         client.gauge("titi", 3);
         throwOnError(client);
         expected.emplace_back("sendRecv.titi:3|g");
+
+        // Record a gauge "titifloat" to -123.456789 with precision 3
+        client.gauge("titifloat", -123.456789);
+        throwOnError(client);
+        expected.emplace_back("sendRecv.titifloat:-123.457|g");
 
         // Record a timing of 2ms for "myTiming"
         client.seed(19);

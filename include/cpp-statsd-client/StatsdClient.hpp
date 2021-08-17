@@ -4,8 +4,10 @@
 #include <cpp-statsd-client/UDPSender.hpp>
 #include <cstdint>
 #include <cstdio>
+#include <iomanip>
 #include <memory>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -63,7 +65,8 @@ public:
                  const uint16_t port,
                  const std::string& prefix,
                  const uint64_t batchsize = 0,
-                 const uint64_t sendInterval = 1000) noexcept;
+                 const uint64_t sendInterval = 1000,
+                 const unsigned int gaugePrecision = 4) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
@@ -78,7 +81,8 @@ public:
                    const uint16_t port,
                    const std::string& prefix,
                    const uint64_t batchsize = 0,
-                   const uint64_t sendInterval = 1000) noexcept;
+                   const uint64_t sendInterval = 1000,
+                   const unsigned int gaugePrecision = 4) noexcept;
 
     //! Returns the error message as an std::string
     const std::string& errorMessage() const noexcept;
@@ -100,8 +104,9 @@ public:
                const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Records a gauge for the key, with a given value, at a given frequency rate
+    template <typename T>
     void gauge(const std::string& key,
-               const unsigned int value,
+               const T value,
                float frequency = 1.0f,
                const std::vector<std::string>& tags = {}) const noexcept;
 
@@ -130,8 +135,9 @@ private:
     // @{
 
     //! Send a value for a key, according to its type, at a given frequency
+    template <typename T>
     void send(const std::string& key,
-              const int value,
+              const T value,
               const char* type,
               float frequency,
               const std::vector<std::string>& tags) const noexcept;
@@ -150,6 +156,9 @@ private:
 
     //! The buffer string format our stats before sending them
     mutable std::string m_buffer;
+
+    //! Fixed floating point precision of gauges
+    unsigned int m_gaugePrecision;
 };
 
 namespace detail {
@@ -172,8 +181,11 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
                                   const std::string& prefix,
                                   const uint64_t batchsize,
-                                  const uint64_t sendInterval) noexcept
-    : m_prefix(detail::sanitizePrefix(prefix)), m_sender(new UDPSender{host, port, batchsize, sendInterval}) {
+                                  const uint64_t sendInterval,
+                                  const unsigned int gaugePrecision) noexcept
+    : m_prefix(detail::sanitizePrefix(prefix)),
+      m_sender(new UDPSender{host, port, batchsize, sendInterval}),
+      m_gaugePrecision(gaugePrecision) {
     // Initialize the random generator to be used for sampling
     seed();
     // Avoid re-allocations by reserving a generous buffer
@@ -184,9 +196,11 @@ inline void StatsdClient::setConfig(const std::string& host,
                                     const uint16_t port,
                                     const std::string& prefix,
                                     const uint64_t batchsize,
-                                    const uint64_t sendInterval) noexcept {
+                                    const uint64_t sendInterval,
+                                    const unsigned int gaugePrecision) noexcept {
     m_prefix = detail::sanitizePrefix(prefix);
     m_sender.reset(new UDPSender(host, port, batchsize, sendInterval));
+    m_gaugePrecision = gaugePrecision;
 }
 
 inline const std::string& StatsdClient::errorMessage() const noexcept {
@@ -196,45 +210,47 @@ inline const std::string& StatsdClient::errorMessage() const noexcept {
 inline void StatsdClient::decrement(const std::string& key,
                                     float frequency,
                                     const std::vector<std::string>& tags) const noexcept {
-    return count(key, -1, frequency, tags);
+    count(key, -1, frequency, tags);
 }
 
 inline void StatsdClient::increment(const std::string& key,
                                     float frequency,
                                     const std::vector<std::string>& tags) const noexcept {
-    return count(key, 1, frequency, tags);
+    count(key, 1, frequency, tags);
 }
 
 inline void StatsdClient::count(const std::string& key,
                                 const int delta,
                                 float frequency,
                                 const std::vector<std::string>& tags) const noexcept {
-    return send(key, delta, detail::METRIC_TYPE_COUNT, frequency, tags);
+    send(key, delta, detail::METRIC_TYPE_COUNT, frequency, tags);
 }
 
+template <typename T>
 inline void StatsdClient::gauge(const std::string& key,
-                                const unsigned int value,
+                                const T value,
                                 const float frequency,
                                 const std::vector<std::string>& tags) const noexcept {
-    return send(key, value, detail::METRIC_TYPE_GAUGE, frequency, tags);
+    send(key, value, detail::METRIC_TYPE_GAUGE, frequency, tags);
 }
 
 inline void StatsdClient::timing(const std::string& key,
                                  const unsigned int ms,
                                  float frequency,
                                  const std::vector<std::string>& tags) const noexcept {
-    return send(key, ms, detail::METRIC_TYPE_TIMING, frequency, tags);
+    send(key, ms, detail::METRIC_TYPE_TIMING, frequency, tags);
 }
 
 inline void StatsdClient::set(const std::string& key,
                               const unsigned int sum,
                               float frequency,
                               const std::vector<std::string>& tags) const noexcept {
-    return send(key, sum, detail::METRIC_TYPE_SET, frequency, tags);
+    send(key, sum, detail::METRIC_TYPE_SET, frequency, tags);
 }
 
+template <typename T>
 inline void StatsdClient::send(const std::string& key,
-                               const int value,
+                               const T value,
                                const char* type,
                                float frequency,
                                const std::vector<std::string>& tags) const noexcept {
@@ -255,6 +271,9 @@ inline void StatsdClient::send(const std::string& key,
     }
 
     // Format the stat message
+    std::stringstream valueStream;
+    valueStream << std::fixed << std::setprecision(m_gaugePrecision) << value;
+
     m_buffer.clear();
 
     m_buffer.append(m_prefix);
@@ -264,7 +283,7 @@ inline void StatsdClient::send(const std::string& key,
 
     m_buffer.append(key);
     m_buffer.push_back(':');
-    m_buffer.append(std::to_string(value));
+    m_buffer.append(valueStream.str());
     m_buffer.push_back('|');
     m_buffer.append(type);
 
