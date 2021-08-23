@@ -45,8 +45,11 @@ A simple example of how to use the client:
 using namespace Statsd;
 
 int main() {
-    // Define the client on localhost, with port 8080, using a prefix and a batching size of 20 bytes
-    StatsdClient client{ "127.0.0.1", 8080, "myPrefix", 20 };
+    // Define the client on localhost, with port 8080,
+    // using a prefix,
+    // a batching size of 20 bytes,
+    // and three points of precision for floating point gauge values
+    StatsdClient client{ "127.0.0.1", 8080, "myPrefix", 20, 3 };
 
     // Increment the metric "coco"
     client.increment("coco");
@@ -110,13 +113,16 @@ using namespace Statsd;
 
 int main()
 {
-    // Define the client on localhost, with port 8080, using a prefix and a batching size of 20 bytes
-    StatsdClient client{ "127.0.0.1", 8080, "myPrefix", 20 };
+    // Define the client on localhost, with port 8080,
+    // using a prefix,
+    // a batching size of 20 bytes,
+    // and three points of precision for floating point gauge values
+    StatsdClient client{ "127.0.0.1", 8080, "myPrefix", 20, 3 };
 
     client.increment("coco");
 
-    // Set a new configuration, using a different port and a different prefix
-    client.setConfig("127.0.0.1", 8000, "anotherPrefix");
+    // Set a new configuration, using a different port, a different prefix, and more gauge precision
+    client.setConfig("127.0.0.1", 8000, "anotherPrefix", 6);
 
     client.decrement("kiki");
 }
