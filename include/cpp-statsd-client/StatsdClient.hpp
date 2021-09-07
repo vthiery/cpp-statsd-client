@@ -76,7 +76,7 @@ public:
     //!@name Methods
     //!@{
 
-    //! Sets a configuration { host, port, prefix, batchsize }
+    //! Sets a configuration
     void setConfig(const std::string& host,
                    const uint16_t port,
                    const std::string& prefix,
