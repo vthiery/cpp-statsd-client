@@ -102,7 +102,7 @@ StatsdClient client{"localhost", 8080, "myPrefix", 64, 1000};
 
 The send interval controls the time, in milliseconds, to wait before flushing/sending the queued stats batches to the statsd process. When the send interval is non-zero a background thread is spawned which will do the flushing/sending at the configured send interval, in other words asynchronously. The queuing mechanism in this case is _not_ lock-free. If batching is enabled but the send interval is set to zero then the queued batchs of stats will not be sent automatically by a background thread but must be sent manually via the `flush` method. The `flush` method is a blocking call.
 
-##### Gauge precision
+#### Gauge precision
 
 Since gauge metrics support floats, it may be useful to configure the desired precision. The client support this via the `gaugePrecision` parameter. E.g.
 
