@@ -181,7 +181,7 @@ inline UDPSender::UDPSender(const std::string& host,
                             const uint64_t sendInterval) noexcept
     : m_host(host), m_port(port), m_batchsize(batchsize), m_sendInterval(sendInterval) {
     // Initialize the socket
-    if (!initialize()) {
+    if (m_host.empty() || !initialize()) {
         return;
     }
 
