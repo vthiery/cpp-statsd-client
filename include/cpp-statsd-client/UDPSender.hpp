@@ -226,8 +226,6 @@ inline UDPSender::~UDPSender() {
 }
 
 inline void UDPSender::send(const std::string& message) noexcept {
-    m_errorMessage.clear();
-
     // If batching is on, accumulate messages in the queue
     if (m_batchsize > 0) {
         queueMessage(message);
@@ -308,6 +306,8 @@ inline bool UDPSender::initialize() noexcept {
 }
 
 inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
+    m_errorMessage.clear();
+
     // Try sending the message
     const auto ret = sendto(m_socket,
                             message.data(),
