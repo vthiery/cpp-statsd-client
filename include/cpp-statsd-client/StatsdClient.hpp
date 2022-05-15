@@ -66,7 +66,7 @@ public:
                  const std::string& prefix,
                  const uint64_t batchsize = 0,
                  const uint64_t sendInterval = 1000,
-                 const unsigned int gaugePrecision = 4) noexcept;
+                 const int gaugePrecision = 4) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
@@ -82,7 +82,7 @@ public:
                    const std::string& prefix,
                    const uint64_t batchsize = 0,
                    const uint64_t sendInterval = 1000,
-                   const unsigned int gaugePrecision = 4) noexcept;
+                   const int gaugePrecision = 4) noexcept;
 
     //! Returns the error message as an std::string
     const std::string& errorMessage() const noexcept;
@@ -158,7 +158,7 @@ private:
     mutable std::string m_buffer;
 
     //! Fixed floating point precision of gauges
-    unsigned int m_gaugePrecision;
+    int m_gaugePrecision;
 };
 
 namespace detail {
@@ -182,7 +182,7 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const std::string& prefix,
                                   const uint64_t batchsize,
                                   const uint64_t sendInterval,
-                                  const unsigned int gaugePrecision) noexcept
+                                  const int gaugePrecision) noexcept
     : m_prefix(detail::sanitizePrefix(prefix)),
       m_sender(new UDPSender{host, port, batchsize, sendInterval}),
       m_gaugePrecision(gaugePrecision) {
@@ -197,7 +197,7 @@ inline void StatsdClient::setConfig(const std::string& host,
                                     const std::string& prefix,
                                     const uint64_t batchsize,
                                     const uint64_t sendInterval,
-                                    const unsigned int gaugePrecision) noexcept {
+                                    const int gaugePrecision) noexcept {
     m_prefix = detail::sanitizePrefix(prefix);
     m_sender.reset(new UDPSender(host, port, batchsize, sendInterval));
     m_gaugePrecision = gaugePrecision;
