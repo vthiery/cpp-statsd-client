@@ -11,7 +11,7 @@ jobs:
           choco install cmake
       - name: build
         run: |
-          cmake -S . -B build -G "Visual Studio 16 2019" -A x64
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
           cmake --build build --target ALL_BUILD --config Release
       - name: test
         run: |
