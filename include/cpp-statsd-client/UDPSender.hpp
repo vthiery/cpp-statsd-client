@@ -320,8 +320,8 @@ inline void UDPSender::sendToDaemon(const std::string& message) noexcept {
                             (struct sockaddr*)&m_server,
                             sizeof(m_server));
     if (ret == -1) {
-        m_errorMessage = "sendto server failed: host=" + m_host + ":" + std::to_string(m_port) +
-                         ", err=" + std::to_string(SOCKET_ERRNO);
+        m_errorMessage = "sendto server failed: host=" + m_host + ":" +
+                         std::to_string(static_cast<unsigned int>(m_port)) + ", err=" + std::to_string(SOCKET_ERRNO);
     }
 }
 

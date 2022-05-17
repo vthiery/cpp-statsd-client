@@ -59,7 +59,11 @@ public:
         // Try to receive (this is blocking)
         std::string buffer(256, '\0');
         int string_len;
+#ifdef _WIN32
         if ((string_len = recv(m_socket, &buffer[0], static_cast<int>(buffer.size()), 0)) < 1) {
+#else
+        if ((string_len = recv(m_socket, &buffer[0], buffer.size(), 0)) < 1) {
+#endif
             m_errorMessage = "Could not recv on the socket file descriptor";
             return "";
         }
