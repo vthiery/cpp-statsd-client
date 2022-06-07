@@ -122,6 +122,14 @@ public:
              float frequency = 1.0f,
              const std::vector<std::string>& tags = {}) const noexcept;
 
+    //! Records a custom metric type for the key, with a given value, at a given frequency
+    template <typename T>
+    void custom(const std::string& key,
+                const T value,
+                const char* type,
+                float frequency = 1.0f,
+                const std::vector<std::string>& tags = {}) const noexcept;
+
     //! Seed the RNG that controls sampling
     void seed(unsigned int seed = std::random_device()()) noexcept;
 
@@ -246,6 +254,15 @@ inline void StatsdClient::set(const std::string& key,
                               float frequency,
                               const std::vector<std::string>& tags) const noexcept {
     send(key, sum, detail::METRIC_TYPE_SET, frequency, tags);
+}
+
+template <typename T>
+inline void StatsdClient::custom(const std::string& key,
+                                 const T value,
+                                 const char* type,
+                                 const float frequency,
+                                 const std::vector<std::string>& tags) const noexcept {
+    send(key, value, type, frequency, tags);
 }
 
 template <typename T>

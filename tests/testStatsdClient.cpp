@@ -139,6 +139,11 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
         client.count("foo", -42, .9f, {"bar", "baz"});
         throwOnError(client);
         expected.emplace_back("sendRecv.foo:-42|c|@0.90|#bar,baz");
+
+        // Custom metric type should pass through all params
+        client.custom("custom_metric_type", 5678, "cust", .95f, {"tag1", "tag2"});
+        throwOnError(client);
+        expected.emplace_back("sendRecv.custom_metric_type:5678|cust|@0.95|#tag1,tag2");
     }
 
     // Signal the mock server we are done
