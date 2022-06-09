@@ -134,6 +134,20 @@ One may also attach tags to a metrics, e.g.
 client.gauge("titi", 3.2, 0.1f, {"foo", "bar"});
 ```
 
+### Custom metric types
+
+Some statsd backends (e.g. Datadog, netdata) support metric types beyond those supported by the original Etsy statsd daemon, e.g.
+
+* Histograms (type "h"), which are like Timers, but with different units
+* Dictionaries (type "d"), which are like Sets but also record a count for each unique value
+
+Non-standard metrics can be sent using the `custom()` method, where the metric type is passed in by the caller.  The client performs no validation, under the assumption that the caller will only pass in types, values, and other optional parameters (e.g. frequency, tags) that are supported by their backend.  The templated `value` parameter must support serialization to a `std::basic_ostream` using `operator<<`.
+
+```cpp
+// Record a histogram of packet sizes
+client.custom("packet_size", 1500, "h");
+```
+
 ## Advanced Testing
 
 A simple mock StatsD server can be found at `tests/StatsdServer.hpp`. This can be used to do simple validation of your application's metrics, typically in the form of unit tests. In fact this is the primary means by which this library is tested. The mock server itself is not distributed with the library so to use it you'd need to vendor this project into your project. Once you have though, you can test your application's use of the client like so:
