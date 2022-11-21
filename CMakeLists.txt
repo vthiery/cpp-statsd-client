@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(cpp-statsd-client
         VERSION 1.0.2
         LANGUAGES CXX
-        DESCRIPTION "A header-only StatsD client implemented in C++"
-        HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
+        DESCRIPTION "A header-only StatsD client implemented in C++")
 
 option(CPP_STATSD_STANDALONE "Allows configuration of targets for verifying library functionality" ON)
 option(ENABLE_TESTS "Build tests" ON)
