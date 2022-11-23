@@ -1,5 +1,5 @@
 # Basic project setup
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12.4)
 project(cpp-statsd-client
         VERSION 1.0.2
         LANGUAGES CXX
