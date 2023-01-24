@@ -15,8 +15,8 @@
 
 #if defined(__FreeBSD__)
 #include <netinet/in.h>
-#endif    
-    
+#endif
+
 #include <atomic>
 #include <cmath>
 #include <cstdint>
