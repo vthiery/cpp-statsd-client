@@ -13,6 +13,10 @@
 #include <unistd.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <netinet/in.h>
+#endif
+
 #include <atomic>
 #include <cmath>
 #include <cstdint>
