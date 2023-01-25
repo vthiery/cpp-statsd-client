@@ -1,7 +1,7 @@
 # Basic project setup
 cmake_minimum_required(VERSION 3.12.4)
 project(cpp-statsd-client
-        VERSION 1.0.2
+        VERSION 2.0.1
         LANGUAGES CXX
         DESCRIPTION "A header-only StatsD client implemented in C++"
         HOMEPAGE_URL "https://github.com/vthiery/cpp-statsd-client")
