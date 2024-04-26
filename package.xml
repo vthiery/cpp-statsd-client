@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>cpp-statsd-client</name>
+  <version>1.0.0</version>
+  <description>cpp-statsd-client package</description>
+
+  <maintainer email="pbovbel@locusrobotics.com">Paul Bovbel</maintainer>
+
+  <license>MIT</license>
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <!-- <depend>build-essentials</depend> -->
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <build_type>cmake</build_type>
+    <pip_requirements>requirements.txt</pip_requirements>
+  </export>
+</package>
