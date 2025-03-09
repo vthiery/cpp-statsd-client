@@ -9,17 +9,22 @@ using namespace Statsd;
 // Note that we could just synchronously recv metrics and not use a thread but doing the test async has the
 // advantage that we can test the threaded batching mode in a straightforward way. The server thread basically
 // just keeps storing metrics in an vector until it hears a special one signaling the test is over and bails
-void mock(StatsdServer& server, std::vector<std::string>& messages) {
+void mock(StatsdServer& server, std::vector<std::string>& messages, bool split) {
     do {
         // Grab the messages that are waiting
         auto recvd = server.receive();
 
+        // If we don't want splitting, give the raw message though we still go
+        // through splitting to parse the quit message
+        if (!split) messages.emplace_back(recvd);
+
         // Split the messages on '\n'
         auto start = std::string::npos;
         do {
-            // Keep this message
+            // Keep this message (unless we don't want splitting, then we
+            // do nothing because we already stored the whole batch)
             auto end = recvd.find('\n', ++start);
-            messages.emplace_back(recvd.substr(start, end));
+            if (split) messages.emplace_back(recvd.substr(start, end));
             start = end;
 
             // Bail if we found the special quit message
@@ -79,7 +84,7 @@ void testReconfigure() {
 void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     StatsdServer mock_server;
     std::vector<std::string> messages, expected;
-    std::thread server(mock, std::ref(mock_server), std::ref(messages));
+    std::thread server(mock, std::ref(mock_server), std::ref(messages), /*split=*/true);
 
     // Set a new config that has the client send messages to a proper address that can be resolved
     StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3);
