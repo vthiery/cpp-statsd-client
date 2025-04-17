@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <memory>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <string>
@@ -165,6 +166,9 @@ private:
     //! The buffer string format our stats before sending them
     mutable std::string m_buffer;
 
+    //! The mutex to lock m_buffer
+    mutable std::mutex m_buffer_mutex;
+
     //! Fixed floating point precision of gauges
     int m_gaugePrecision;
 };
@@ -291,6 +295,7 @@ inline void StatsdClient::send(const std::string& key,
     std::stringstream valueStream;
     valueStream << std::fixed << std::setprecision(m_gaugePrecision) << value;
 
+    std::lock_guard<std::mutex> buffer_lock(m_buffer_mutex);
     m_buffer.clear();
 
     m_buffer.append(m_prefix);
