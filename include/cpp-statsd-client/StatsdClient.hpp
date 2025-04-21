@@ -286,6 +286,8 @@ inline void StatsdClient::send(const std::string& key,
     std::stringstream valueStream;
     valueStream << std::fixed << std::setprecision(m_gaugePrecision) << value;
 
+    // the thread keeps this buffer around and reuses it, clear should be O(1)
+    // and reserve should only have to do so the first time, after that, it's a no-op
     static thread_local std::string buffer;
     buffer.clear();
     buffer.reserve(256);
