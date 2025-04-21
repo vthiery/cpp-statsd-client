@@ -66,7 +66,8 @@ public:
                  const std::string& prefix,
                  const uint64_t batchsize = 0,
                  const uint64_t sendInterval = 1000,
-                 const int gaugePrecision = 4) noexcept;
+                 const int gaugePrecision = 4,
+                 unsigned int seed = std::random_device()()) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
@@ -75,14 +76,6 @@ public:
 
     //!@name Methods
     //!@{
-
-    //! Sets a configuration
-    void setConfig(const std::string& host,
-                   const uint16_t port,
-                   const std::string& prefix,
-                   const uint64_t batchsize = 0,
-                   const uint64_t sendInterval = 1000,
-                   const int gaugePrecision = 4) noexcept;
 
     //! Returns the error message as an std::string
     const std::string& errorMessage() const noexcept;
@@ -130,9 +123,6 @@ public:
                 float frequency = 1.0f,
                 const std::vector<std::string>& tags = {}) const noexcept;
 
-    //! Seed the RNG that controls sampling
-    void seed(unsigned int seed = std::random_device()()) noexcept;
-
     //! Flush any queued stats to the daemon
     void flush() noexcept;
 
@@ -159,9 +149,6 @@ private:
     //! The UDP sender to be used for actual sending
     std::unique_ptr<UDPSender> m_sender;
 
-    //! The random number generator for handling sampling
-    mutable std::mt19937 m_randomEngine;
-
     //! Fixed floating point precision of gauges
     int m_gaugePrecision;
 };
@@ -173,6 +160,11 @@ inline std::string sanitizePrefix(std::string prefix) {
         prefix.pop_back();
     }
     return prefix;
+}
+
+std::mt19937& rng(unsigned int seed = 0){
+    static thread_local std::mt19937 twister(seed);
+    return twister;
 }
 
 // All supported metric types
@@ -187,12 +179,13 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const std::string& prefix,
                                   const uint64_t batchsize,
                                   const uint64_t sendInterval,
-                                  const int gaugePrecision) noexcept
+                                  const int gaugePrecision
+                                  const unsigned int seed) noexcept
     : m_prefix(detail::sanitizePrefix(prefix)),
       m_sender(new UDPSender{host, port, batchsize, sendInterval}),
       m_gaugePrecision(gaugePrecision) {
     // Initialize the random generator to be used for sampling
-    seed();
+    rng(seed);
 }
 
 inline void StatsdClient::setConfig(const std::string& host,
@@ -278,7 +271,7 @@ inline void StatsdClient::send(const std::string& key,
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
     const bool isFrequencyZero = std::fabs(frequency) < epsilon;
     if (isFrequencyZero ||
-        (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(m_randomEngine)))) {
+        (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(rng())))) {
         return;
     }
 
@@ -321,11 +314,7 @@ inline void StatsdClient::send(const std::string& key,
     m_sender->send(buffer);
 }
 
-inline void StatsdClient::seed(unsigned int seed) noexcept {
-    m_randomEngine.seed(seed);
-}
-
-inline void StatsdClient::flush() noexcept {
+inline void StatsdClient::flush() const noexcept {
     m_sender->flush();
 }
 
