@@ -162,7 +162,7 @@ inline std::string sanitizePrefix(std::string prefix) {
     return prefix;
 }
 
-std::mt19937& rng(unsigned int seed = 0) {
+inline std::mt19937& rng(unsigned int seed = 0) {
     static thread_local std::mt19937 twister(seed);
     return twister;
 }
@@ -186,17 +186,6 @@ inline StatsdClient::StatsdClient(const std::string& host,
       m_gaugePrecision(gaugePrecision) {
     // Initialize the random generator to be used for sampling
     detail::rng(seed);
-}
-
-inline void StatsdClient::setConfig(const std::string& host,
-                                    const uint16_t port,
-                                    const std::string& prefix,
-                                    const uint64_t batchsize,
-                                    const uint64_t sendInterval,
-                                    const int gaugePrecision) noexcept {
-    m_prefix = detail::sanitizePrefix(prefix);
-    m_sender.reset(new UDPSender(host, port, batchsize, sendInterval));
-    m_gaugePrecision = gaugePrecision;
 }
 
 inline const std::string& StatsdClient::errorMessage() const noexcept {
