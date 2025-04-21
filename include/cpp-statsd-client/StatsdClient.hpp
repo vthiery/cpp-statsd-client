@@ -162,9 +162,6 @@ private:
     //! The random number generator for handling sampling
     mutable std::mt19937 m_randomEngine;
 
-    //! The buffer string format our stats before sending them
-    mutable std::string m_buffer;
-
     //! Fixed floating point precision of gauges
     int m_gaugePrecision;
 };
@@ -196,8 +193,6 @@ inline StatsdClient::StatsdClient(const std::string& host,
       m_gaugePrecision(gaugePrecision) {
     // Initialize the random generator to be used for sampling
     seed();
-    // Avoid re-allocations by reserving a generous buffer
-    m_buffer.reserve(256);
 }
 
 inline void StatsdClient::setConfig(const std::string& host,
@@ -291,35 +286,39 @@ inline void StatsdClient::send(const std::string& key,
     std::stringstream valueStream;
     valueStream << std::fixed << std::setprecision(m_gaugePrecision) << value;
 
-    m_buffer.clear();
+    // the thread keeps this buffer around and reuses it, clear should be O(1)
+    // and reserve should only have to do so the first time, after that, it's a no-op
+    static thread_local std::string buffer;
+    buffer.clear();
+    buffer.reserve(256);
 
-    m_buffer.append(m_prefix);
+    buffer.append(m_prefix);
     if (!m_prefix.empty() && !key.empty()) {
-        m_buffer.push_back('.');
+        buffer.push_back('.');
     }
 
-    m_buffer.append(key);
-    m_buffer.push_back(':');
-    m_buffer.append(valueStream.str());
-    m_buffer.push_back('|');
-    m_buffer.append(type);
+    buffer.append(key);
+    buffer.push_back(':');
+    buffer.append(valueStream.str());
+    buffer.push_back('|');
+    buffer.append(type);
 
     if (frequency < 1.f) {
-        m_buffer.append("|@0.");
-        m_buffer.append(std::to_string(static_cast<int>(frequency * 100)));
+        buffer.append("|@0.");
+        buffer.append(std::to_string(static_cast<int>(frequency * 100)));
     }
 
     if (!tags.empty()) {
-        m_buffer.append("|#");
+        buffer.append("|#");
         for (const auto& tag : tags) {
-            m_buffer.append(tag);
-            m_buffer.push_back(',');
+            buffer.append(tag);
+            buffer.push_back(',');
         }
-        m_buffer.pop_back();
+        buffer.pop_back();
     }
 
     // Send the message via the UDP sender
-    m_sender->send(m_buffer);
+    m_sender->send(buffer);
 }
 
 inline void StatsdClient::seed(unsigned int seed) noexcept {
