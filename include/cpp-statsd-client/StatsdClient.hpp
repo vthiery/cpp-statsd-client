@@ -270,7 +270,7 @@ inline void StatsdClient::send(const std::string& key,
     constexpr float epsilon{0.0001f};
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
     const bool isFrequencyZero = std::fabs(frequency) < epsilon;
-    if (isFrequencyZero || (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(rng())))) {
+    if (isFrequencyZero || (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(detail::rng())))) {
         return;
     }
 
