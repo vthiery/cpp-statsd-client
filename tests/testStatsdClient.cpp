@@ -59,7 +59,7 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     std::thread server(mock, std::ref(mock_server), std::ref(messages));
 
     // Set a new config that has the client send messages to a proper address that can be resolved
-    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3);
+    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3, 19); // this seed works for the testing below
     throwOnError(client);
 
     // TODO: I forget if we need to wait for the server to be ready here before sending the first stats
@@ -77,7 +77,6 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
         expected.emplace_back("sendRecv.kiki:-1|c");
 
         // Adjusts "toto" by +2
-        client.seed(19);  // this seed gets a hit on the first call
         client.count("toto", 2, 0.1f);
         throwOnError(client);
         expected.emplace_back("sendRecv.toto:2|c|@0.10");
@@ -97,7 +96,6 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
         expected.emplace_back("sendRecv.titifloat:-123.457|g");
 
         // Record a timing of 2ms for "myTiming"
-        client.seed(19);
         client.timing("myTiming", 2, 0.1f);
         throwOnError(client);
         expected.emplace_back("sendRecv.myTiming:2|ms|@0.10");
