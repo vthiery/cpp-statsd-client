@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: lint
-        uses: DoozyX/clang-format-lint-action@v0.12
+        uses: DoozyX/clang-format-lint-action@v0.18.2
         with:
           clangFormatVersion: 12
           source: './include/cpp-statsd-client ./tests'
