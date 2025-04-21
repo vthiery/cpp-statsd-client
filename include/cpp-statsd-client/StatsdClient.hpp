@@ -124,7 +124,7 @@ public:
                 const std::vector<std::string>& tags = {}) const noexcept;
 
     //! Flush any queued stats to the daemon
-    void flush() noexcept;
+    void flush() const noexcept;
 
     //!@}
 
