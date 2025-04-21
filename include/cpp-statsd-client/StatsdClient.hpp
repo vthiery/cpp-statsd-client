@@ -185,7 +185,7 @@ inline StatsdClient::StatsdClient(const std::string& host,
       m_sender(new UDPSender{host, port, batchsize, sendInterval}),
       m_gaugePrecision(gaugePrecision) {
     // Initialize the random generator to be used for sampling
-    rng(seed);
+    detail::rng(seed);
 }
 
 inline void StatsdClient::setConfig(const std::string& host,
