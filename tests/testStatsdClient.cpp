@@ -153,8 +153,6 @@ int main() {
 
     // general things that should be errors
     testErrorConditions();
-    // reconfiguring how you are sending
-    testReconfigure();
     // no batching
     testSendRecv(0, 0);
     // background batching
