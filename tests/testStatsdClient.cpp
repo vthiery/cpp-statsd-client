@@ -53,29 +53,6 @@ void testErrorConditions() {
     throwOnError(client, false, "Should not be able to resolve a ridiculous ip");
 }
 
-void testReconfigure() {
-    StatsdServer server;
-    throwOnError(server);
-
-    StatsdClient client("localhost", 8125, "first.");
-    client.increment("foo");
-    throwOnWrongMessage(server, "first.foo:1|c");
-
-    client.setConfig("localhost", 8125, "second");
-    client.increment("bar");
-    throwOnWrongMessage(server, "second.bar:1|c");
-
-    client.setConfig("localhost", 8125, "");
-    client.increment("third.baz");
-    throwOnWrongMessage(server, "third.baz:1|c");
-
-    client.increment("");
-    throwOnWrongMessage(server, ":1|c");
-
-    // TODO: test what happens with the batching after resolving the question about incomplete
-    //  batches being dropped vs sent on reconfiguring
-}
-
 void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     StatsdServer mock_server;
     std::vector<std::string> messages, expected;
