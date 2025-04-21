@@ -286,7 +286,8 @@ inline void StatsdClient::send(const std::string& key,
     std::stringstream valueStream;
     valueStream << std::fixed << std::setprecision(m_gaugePrecision) << value;
 
-    std::string buffer;
+    static thread_local std::string buffer;
+    buffer.clear();
     buffer.reserve(256);
 
     buffer.append(m_prefix);
