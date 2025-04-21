@@ -162,7 +162,7 @@ inline std::string sanitizePrefix(std::string prefix) {
     return prefix;
 }
 
-std::mt19937& rng(unsigned int seed = 0){
+std::mt19937& rng(unsigned int seed = 0) {
     static thread_local std::mt19937 twister(seed);
     return twister;
 }
@@ -179,7 +179,7 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const std::string& prefix,
                                   const uint64_t batchsize,
                                   const uint64_t sendInterval,
-                                  const int gaugePrecision
+                                  const int gaugePrecision,
                                   const unsigned int seed) noexcept
     : m_prefix(detail::sanitizePrefix(prefix)),
       m_sender(new UDPSender{host, port, batchsize, sendInterval}),
@@ -270,8 +270,7 @@ inline void StatsdClient::send(const std::string& key,
     constexpr float epsilon{0.0001f};
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
     const bool isFrequencyZero = std::fabs(frequency) < epsilon;
-    if (isFrequencyZero ||
-        (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(rng())))) {
+    if (isFrequencyZero || (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(rng())))) {
         return;
     }
 
