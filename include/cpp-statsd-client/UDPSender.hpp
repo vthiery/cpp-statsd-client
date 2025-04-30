@@ -246,8 +246,8 @@ inline void UDPSender::queueMessage(const std::string& message) noexcept {
     // We aquire a lock but only if we actually need to (i.e. there is a thread also accessing the queue)
     auto batchingLock =
         m_batchingThread.joinable() ? std::unique_lock<std::mutex>(m_batchingMutex) : std::unique_lock<std::mutex>();
-    // Either we don't have a place to batch our message or we exceeded the batch size, so make a new batch
-    if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().length() > m_batchsize) {
+    // Either we don't have a place to batch our message or we are about to exceed the batch size, so make a new batch
+    if (m_batchingMessageQueue.empty() || m_batchingMessageQueue.back().size() + message.size() > m_batchsize) {
         m_batchingMessageQueue.emplace_back();
         m_batchingMessageQueue.back().reserve(m_batchsize + 256);
     }  // When there is already a batch open we need a separator when its not empty
