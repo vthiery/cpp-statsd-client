@@ -4,14 +4,38 @@
 #include <cpp-statsd-client/UDPSender.hpp>
 #include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <iomanip>
 #include <memory>
 #include <random>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Statsd {
+
+namespace detail {
+inline std::string sanitizePrefix(std::string prefix) {
+    // For convenience we provide the dot when generating the stat message
+    if (!prefix.empty() && prefix.back() == '.') {
+        prefix.pop_back();
+    }
+    return prefix;
+}
+
+inline float rand(unsigned int seed) {
+    static thread_local std::mt19937 twister(seed);
+    static thread_local std::uniform_real_distribution<float> dist(0.f, 1.f);
+    return dist(twister);
+}
+
+// All supported metric types
+constexpr char METRIC_TYPE_COUNT[] = "c";
+constexpr char METRIC_TYPE_GAUGE[] = "g";
+constexpr char METRIC_TYPE_TIMING[] = "ms";
+constexpr char METRIC_TYPE_SET[] = "s";
+}  // namespace detail
 
 /*!
  *
@@ -27,8 +51,8 @@ namespace Statsd {
  * nor prepend one to the key
  *
  * The sampling frequency is specified per call and uses a
- * random number generator to determine whether or not the stat
- * will be recorded this time or not.
+ * random number generator (optionally user-specified) to
+ * determine whether the stat will be recorded this time or not.
  *
  * The top level configuration includes 2 optional parameters
  * that determine how the stats are delivered to statsd. These
@@ -57,6 +81,11 @@ namespace Statsd {
  */
 class StatsdClient {
 public:
+
+    //! A functor that returns a value between 0 and 1 used
+    //! to determine whether a given message is sampled.
+    using FrequencyFunc = std::function<float()>;
+
     //!@name Constructor and destructor, non-copyable
     //!@{
 
@@ -67,7 +96,8 @@ public:
                  const uint64_t batchsize = 0,
                  const uint64_t sendInterval = 1000,
                  const int gaugePrecision = 4,
-                 unsigned int seed = std::random_device()()) noexcept;
+                 FrequencyFunc  frequencyFunc =
+                     std::bind(detail::rand, std::random_device()())) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
@@ -142,7 +172,6 @@ private:
 
     //!@}
 
-private:
     //! The prefix to be used for metrics
     std::string m_prefix;
 
@@ -151,28 +180,10 @@ private:
 
     //! Fixed floating point precision of gauges
     int m_gaugePrecision;
+
+    //! The function used to determine whether a message is sampled
+    FrequencyFunc m_frequencyFunc;
 };
-
-namespace detail {
-inline std::string sanitizePrefix(std::string prefix) {
-    // For convenience we provide the dot when generating the stat message
-    if (!prefix.empty() && prefix.back() == '.') {
-        prefix.pop_back();
-    }
-    return prefix;
-}
-
-inline std::mt19937& rng(unsigned int seed = 0) {
-    static thread_local std::mt19937 twister(seed);
-    return twister;
-}
-
-// All supported metric types
-constexpr char METRIC_TYPE_COUNT[] = "c";
-constexpr char METRIC_TYPE_GAUGE[] = "g";
-constexpr char METRIC_TYPE_TIMING[] = "ms";
-constexpr char METRIC_TYPE_SET[] = "s";
-}  // namespace detail
 
 inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint16_t port,
@@ -180,12 +191,10 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint64_t batchsize,
                                   const uint64_t sendInterval,
                                   const int gaugePrecision,
-                                  const unsigned int seed) noexcept
+                                  FrequencyFunc  frequencyFunc) noexcept
     : m_prefix(detail::sanitizePrefix(prefix)),
       m_sender(new UDPSender{host, port, batchsize, sendInterval}),
-      m_gaugePrecision(gaugePrecision) {
-    // Initialize the random generator to be used for sampling
-    detail::rng(seed);
+      m_gaugePrecision(gaugePrecision), m_frequencyFunc(std::move(frequencyFunc)) {
 }
 
 inline const std::string& StatsdClient::errorMessage() const noexcept {
@@ -260,7 +269,7 @@ inline void StatsdClient::send(const std::string& key,
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
     const bool isFrequencyZero = std::fabs(frequency) < epsilon;
     if (isFrequencyZero ||
-        (!isFrequencyOne && (frequency < std::uniform_real_distribution<float>(0.f, 1.f)(detail::rng())))) {
+        (!isFrequencyOne && (frequency < m_frequencyFunc()))) {
         return;
     }
 

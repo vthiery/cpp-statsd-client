@@ -58,15 +58,19 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     std::vector<std::string> messages, expected;
     std::thread server(mock, std::ref(mock_server), std::ref(messages));
 
+    std::mt19937 twister(std::random_device{}());
+    std::uniform_real_distribution<float> dist(0.f, 1.f);
+    auto rand = [&]()->float{return dist(twister);};
+
     // Set a new config that has the client send messages to a proper address that can be resolved
-    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3, 19); // this seed works for the testing below
+    StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3, rand);
     throwOnError(client);
 
     // TODO: I forget if we need to wait for the server to be ready here before sending the first stats
     //  is there a race condition where the client sending before the server binds would drop that clients message
 
     for (int i = 0; i < 3; ++i) {
-        // Increment "coco"
+                // Increment "coco"
         client.increment("coco");
         throwOnError(client);
         expected.emplace_back("sendRecv.coco:1|c");
@@ -77,6 +81,7 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
         expected.emplace_back("sendRecv.kiki:-1|c");
 
         // Adjusts "toto" by +2
+        twister.seed(19);  // this seed gets a hit on the first call
         client.count("toto", 2, 0.1f);
         throwOnError(client);
         expected.emplace_back("sendRecv.toto:2|c|@0.10");
@@ -96,6 +101,7 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
         expected.emplace_back("sendRecv.titifloat:-123.457|g");
 
         // Record a timing of 2ms for "myTiming"
+        twister.seed(19);
         client.timing("myTiming", 2, 0.1f);
         throwOnError(client);
         expected.emplace_back("sendRecv.myTiming:2|ms|@0.10");
@@ -134,13 +140,18 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
 
     // Make sure we get the exactly correct output
     if (messages != expected) {
-        std::cerr << "Unexpected stats received by server, got:" << std::endl;
-        for (const auto& message : messages) {
-            std::cerr << message << std::endl;
+        for (size_t i = 0; i < expected.size(); ++i) {
+            if (i >= messages.size()) {
+                std::cerr << "Missing messages at index " << i << ": expected '" << expected[i] << "'" << std::endl;
+                break;
+            }
+            if (messages[i] != expected[i]) {
+                std::cerr << "Mismatch at index " << i << ": expected '" << expected[i] << "', got '" << messages[i] << "'" << std::endl;
+                break;
+            }
         }
-        std::cerr << std::endl << "But we expected:" << std::endl;
-        for (const auto& message : expected) {
-            std::cerr << message << std::endl;
+        if (messages.size() > expected.size()) {
+            std::cerr << "Got more messages than expected, got " << messages.size() << ", expected " << expected.size() << std::endl;
         }
         throw std::runtime_error("Unexpected stats");
     }
