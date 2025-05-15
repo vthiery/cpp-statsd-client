@@ -60,7 +60,7 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
 
     std::mt19937 twister(std::random_device{}());
     std::uniform_real_distribution<float> dist(0.f, 1.f);
-    auto rand = [&]()->float{return dist(twister);};
+    auto rand = [&]() -> float { return dist(twister); };
 
     // Set a new config that has the client send messages to a proper address that can be resolved
     StatsdClient client("localhost", 8125, "sendRecv.", batchSize, sendInterval, 3, rand);
@@ -146,12 +146,14 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
                 break;
             }
             if (messages[i] != expected[i]) {
-                std::cerr << "Mismatch at index " << i << ": expected '" << expected[i] << "', got '" << messages[i] << "'" << std::endl;
+                std::cerr << "Mismatch at index " << i << ": expected '" << expected[i] << "', got '" << messages[i]
+                          << "'" << std::endl;
                 break;
             }
         }
         if (messages.size() > expected.size()) {
-            std::cerr << "Got more messages than expected, got " << messages.size() << ", expected " << expected.size() << std::endl;
+            std::cerr << "Got more messages than expected, got " << messages.size() << ", expected " << expected.size()
+                      << std::endl;
         }
         throw std::runtime_error("Unexpected stats");
     }
