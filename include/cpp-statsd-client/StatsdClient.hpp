@@ -81,7 +81,6 @@ constexpr char METRIC_TYPE_SET[] = "s";
  */
 class StatsdClient {
 public:
-
     //! A functor that returns a value between 0 and 1 used
     //! to determine whether a given message is sampled.
     using FrequencyFunc = std::function<float()>;
@@ -96,8 +95,7 @@ public:
                  const uint64_t batchsize = 0,
                  const uint64_t sendInterval = 1000,
                  const int gaugePrecision = 4,
-                 FrequencyFunc frequencyFunc =
-                     std::bind(detail::rand, std::random_device()())) noexcept;
+                 FrequencyFunc frequencyFunc = std::bind(detail::rand, std::random_device()())) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
     StatsdClient& operator=(const StatsdClient&) = delete;
@@ -191,11 +189,11 @@ inline StatsdClient::StatsdClient(const std::string& host,
                                   const uint64_t batchsize,
                                   const uint64_t sendInterval,
                                   const int gaugePrecision,
-                                  FrequencyFunc  frequencyFunc) noexcept
+                                  FrequencyFunc frequencyFunc) noexcept
     : m_prefix(detail::sanitizePrefix(prefix)),
       m_sender(new UDPSender{host, port, batchsize, sendInterval}),
-      m_gaugePrecision(gaugePrecision), m_frequencyFunc(std::move(frequencyFunc)) {
-}
+      m_gaugePrecision(gaugePrecision),
+      m_frequencyFunc(std::move(frequencyFunc)) {}
 
 inline const std::string& StatsdClient::errorMessage() const noexcept {
     return m_sender->errorMessage();
@@ -268,8 +266,7 @@ inline void StatsdClient::send(const std::string& key,
     constexpr float epsilon{0.0001f};
     const bool isFrequencyOne = std::fabs(frequency - 1.0f) < epsilon;
     const bool isFrequencyZero = std::fabs(frequency) < epsilon;
-    if (isFrequencyZero ||
-        (!isFrequencyOne && (frequency < m_frequencyFunc()))) {
+    if (isFrequencyZero || (!isFrequencyOne && (frequency < m_frequencyFunc()))) {
         return;
     }
 
