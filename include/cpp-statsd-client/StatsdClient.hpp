@@ -96,7 +96,7 @@ public:
                  const uint64_t batchsize = 0,
                  const uint64_t sendInterval = 1000,
                  const int gaugePrecision = 4,
-                 FrequencyFunc  frequencyFunc =
+                 FrequencyFunc frequencyFunc =
                      std::bind(detail::rand, std::random_device()())) noexcept;
 
     StatsdClient(const StatsdClient&) = delete;
