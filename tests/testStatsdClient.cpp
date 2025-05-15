@@ -70,7 +70,7 @@ void testSendRecv(uint64_t batchSize, uint64_t sendInterval) {
     //  is there a race condition where the client sending before the server binds would drop that clients message
 
     for (int i = 0; i < 3; ++i) {
-                // Increment "coco"
+        // Increment "coco"
         client.increment("coco");
         throwOnError(client);
         expected.emplace_back("sendRecv.coco:1|c");
